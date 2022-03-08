@@ -1,0 +1,41 @@
+,Category
+diesel,Fuel
+electricity_u.s. mix,Fuel
+natural gas,Fuel
+"sulfuric acid, 93%",Chemical
+caustic,Chemical
+ammonia,Chemical
+corn steep liquor,Chemical
+diammonium phosphate,Chemical
+corn oil,Chemical
+glucose,Chemical
+hexane,Chemical
+fgd lime,Chemical
+co2 requirement (fossil co2),Chemical
+wwt polymer,Chemical
+resin,Chemical
+flocculant,Chemical
+toluene,Chemical
+sodium carbonate,Chemical
+nitrogen,Fertilizer
+p2o5,Fertilizer
+k2o,Fertilizer
+herbicide,Fertilizer
+insecticide,Fertilizer
+sorbitol,Chemical
+sodium sulfate salt,Chemical
+maleic anhydride,Chemical
+adipic acid,Chemical
+ethyl acetate ,Chemical
+lipase enzyme,Chemical
+sulfur dioxide,Chemical
+host nutrients,Chemical
+boiler chemicals,Chemical
+cooling tower chemicals,Chemical
+makeup water,Water
+hydrogen,Chemical
+betaketoadipate,Chemical
+ethanol,Chemical
+corn stover_1 leg,Feedstock
+corn stover_2 leg,Feedstock
+electricity,Fuel
