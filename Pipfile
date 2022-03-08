@@ -13,6 +13,8 @@ plotly = "*"
 
 [dev-packages]
 jupyterlab = "*"
+pylint = "*"
+black = "*"
 
 [requires]
 python_version = "3.9"
