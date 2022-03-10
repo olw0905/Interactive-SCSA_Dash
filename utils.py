@@ -140,69 +140,69 @@ def unit_conversion(series):
         return amount * volume.loc[output_unit, input_unit]
 
 
-# def convert_transport_lci(df):
-#     """
-#     df: the original LCI file that contains transportation material, distance, and moisture
-#     """
-#
-#     xl = pd.ExcelFile("../Lookup table_prototyping.xlsx")
-#     nrows = xl.book["Transportation"].max_row
-#
-#     fuel_economy = xl.parse(
-#         sheet_name="Transportation", skipfooter=34, index_col=0
-#     ).dropna(axis=1, how="all")
-#
-#     payload = xl.parse(
-#         sheet_name="Transportation", skiprows=4, skipfooter=28, index_col=0
-#     ).dropna(axis=1, how="all")
-#
-#     dff = df.copy()
-#     dff["Resource"] = dff["Resource"].str.lower()
-#     transport = dff[dff["Category"] == "Transportation"]
-#     dff = dff[dff["Category"] != "Transportation"]
-#     to_append = [dff]
-#
-#     hhdt_payload = payload.loc["Heavy Heavy-Duty Truck"].dropna()
-#     t1 = fuel_economy["Heavy Heavy-Duty Truck"].to_frame()
-#     t2 = hhdt_payload.to_frame()
-#     btu_per_ton_mile = t1.dot((1 / t2).T)
-#     btu_per_ton_mile.columns = btu_per_ton_mile.columns.str.lower()
-#
-#     for index, row in transport.iterrows():
-#         resource = row.at[
-#             "Resource"
-#         ]  # Assuming transport is a series, i.e., there is only one row for transportation
-#         unit = row.at["Unit"]
-#         distance = row.at["Amount"] * length.loc["mi", unit]
-#
-#         to_desti_fuel = (
-#             btu_per_ton_mile.at["Trip from Product Origin to Destination", resource]
-#             * distance
-#             / 1000000
-#         )  # MMBtu per ton
-#         to_origin_fuel = (
-#             btu_per_ton_mile.at[
-#                 "Trip from Product Destination Back to Origin", resource
-#             ]
-#             * distance
-#             / 1000000
-#         )  # MMBtu per ton
-#
-#         df_trans = pd.DataFrame(
-#             {
-#                 "Type": ["Input"] * 2,
-#                 "Process": ["Feedstock production"] * 2,
-#                 "Category": ["Transportation"] * 2,
-#                 "Resource": ["diesel"] * 2,
-#                 "End Use": ["loaded", "empty"],
-#                 "Amount": [to_desti_fuel, to_origin_fuel],
-#                 "Unit": ["mmbtu"] * 2,
-#             }
-#         )
-#
-#         to_append.append(df_trans)
-#
-#     return pd.concat(to_append)
+def convert_transport_lci(df):
+    """
+    df: the original LCI file that contains transportation material, distance, and moisture
+    """
+
+    xl = pd.ExcelFile("Lookup table_prototyping.xlsx")
+    nrows = xl.book["Transportation"].max_row
+
+    fuel_economy = xl.parse(
+        sheet_name="Transportation", skipfooter=34, index_col=0
+    ).dropna(axis=1, how="all")
+
+    payload = xl.parse(
+        sheet_name="Transportation", skiprows=4, skipfooter=28, index_col=0
+    ).dropna(axis=1, how="all")
+
+    dff = df.copy()
+    dff["Resource"] = dff["Resource"].str.lower()
+    transport = dff[dff["Category"] == "Transportation"]
+    dff = dff[dff["Category"] != "Transportation"]
+    to_append = [dff]
+
+    hhdt_payload = payload.loc["Heavy Heavy-Duty Truck"].dropna()
+    t1 = fuel_economy["Heavy Heavy-Duty Truck"].to_frame()
+    t2 = hhdt_payload.to_frame()
+    btu_per_ton_mile = t1.dot((1 / t2).T)
+    btu_per_ton_mile.columns = btu_per_ton_mile.columns.str.lower()
+
+    for index, row in transport.iterrows():
+        resource = row.at[
+            "Resource"
+        ]  # Assuming transport is a series, i.e., there is only one row for transportation
+        unit = row.at["Unit"]
+        distance = row.at["Amount"] * length.loc["mi", unit]
+
+        to_desti_fuel = (
+            btu_per_ton_mile.at["Trip from Product Origin to Destination", resource]
+            * distance
+            / 1000000
+        )  # MMBtu per ton
+        to_origin_fuel = (
+            btu_per_ton_mile.at[
+                "Trip from Product Destination Back to Origin", resource
+            ]
+            * distance
+            / 1000000
+        )  # MMBtu per ton
+
+        df_trans = pd.DataFrame(
+            {
+                "Type": ["Input"] * 2,
+                "Process": ["Feedstock production"] * 2,
+                "Category": ["Transportation"] * 2,
+                "Resource": ["diesel"] * 2,
+                "End Use": ["loaded", "empty"],
+                "Amount": [to_desti_fuel, to_origin_fuel],
+                "Unit": ["mmbtu"] * 2,
+            }
+        )
+
+        to_append.append(df_trans)
+
+    return pd.concat(to_append)
 #
 #
 def step_processing(step_map, step_name):
@@ -272,6 +272,7 @@ def format_input(df):
     Formatting LCI data:
         1. Convert relevant column to lower cases
         2. Convert transportation distance to fuel consumption
+        3. Merge with the properties dataframe (add the LHV and density columns)
 
     Parameters:
         df: Pandas DataFrame containing LCI data
@@ -281,7 +282,7 @@ def format_input(df):
     for col in lower_case_cols:
         df[col] = df[col].str.strip().str.lower()
 
-    # df = convert_transport_lci(df)                                                        # Changed from original
+    df = convert_transport_lci(df)
 
     df = pd.merge(df, properties, left_on="Resource", right_index=True, how="left")
 
@@ -324,86 +325,86 @@ def calculate_lca(df_lci):
     return res
 
 
-def generate_feedstock_lci(
-    lci, end_uses, to_concat=pd.DataFrame(), process_name="Feedstock Harvest"
-):
-    """
-    Generate the formatted harvest LCI dataframe from the input.
-    Parameter:
-        harvest: the dataframe containing the input harvest LCI data.
-        end_uses: a dictionary indicating the end uses of the fuels.
-        to_concat: a dataframe containing the feedstock (main input) and main output of the process.
-    """
-    for fuel in ["Diesel", "Electricity", "Natural Gas"]:
-        lci[fuel] = lci["Energy Consump (mBtu/dry ton)"] * lci[fuel + " %"]
-    df = pd.melt(
-        lci,
-        value_vars=["Diesel", "Electricity", "Natural Gas"],
-        value_name="Amount",
-        var_name="Resource",
-        ignore_index=False,
-    ).reset_index()
-    df["Amount"] = df["Amount"] * 1000  # Convert mBtu to Btu
-    df["Unit"] = "Btu"
-    df["End Use"] = df["Resource"].map(end_uses)
-    # df['Category'] = ''
-    df["Category"] = df["Resource"].str.lower().map(category)
-    df["Process"] = process_name
-    df["Type"] = "Input"
-
-    df = pd.concat([df, to_concat], ignore_index=True)
-
-    return df
-
-
-fuel_economy = pd.read_excel(
-    "Lookup table_prototyping.xlsx",
-    sheet_name="Transportation",
-    skipfooter=34,
-    index_col=0,
-).dropna(axis=1, how="all")
-fuel_economy = fuel_economy[["Heavy Heavy-Duty Truck"]]
-
-
-def generate_transport_lci(
-    transport, to_concat=pd.DataFrame(), process="Feedstock transport"
-):
-    to_append = []
-    for index, row in transport.iterrows():
-        resource = "Corn Stover_1 leg" if "#1" in index else "Corn Stover_2 leg"
-        unit = "mile"  # Assuming transport is a series, i.e., there is only one row for transportation
-        distance = row.at["Distance (mi)"]
-        payload = row.at["Payload (wet tons)"] * (1 - row.at["MC"])
-        btu_per_ton_mile = fuel_economy / payload
-
-        to_desti_fuel = (
-            btu_per_ton_mile.at[
-                "Trip from Product Origin to Destination", "Heavy Heavy-Duty Truck"
-            ]
-            * distance
-            / 1000000
-        )  # MMBtu per ton
-        to_origin_fuel = (
-            btu_per_ton_mile.at[
-                "Trip from Product Destination Back to Origin", "Heavy Heavy-Duty Truck"
-            ]
-            * distance
-            / 1000000
-        )  # MMBtu per ton
-        df_trans = pd.DataFrame(
-            {
-                "Type": ["Input"] * 2,
-                "Process": [process] * 2,
-                "Category": ["Transportation"] * 2,
-                "Resource": ["diesel"] * 2,
-                "End Use": ["loaded", "empty"],
-                "Amount": [to_desti_fuel, to_origin_fuel],
-                "Unit": ["mmbtu"] * 2,
-            }
-        )
-
-        to_append.append(df_trans)
-
-    to_append.append(to_concat)
-
-    return pd.concat(to_append)
+# def generate_feedstock_lci(
+#     lci, end_uses, to_concat=pd.DataFrame(), process_name="Feedstock Harvest"
+# ):
+#     """
+#     Generate the formatted harvest LCI dataframe from the input.
+#     Parameter:
+#         harvest: the dataframe containing the input harvest LCI data.
+#         end_uses: a dictionary indicating the end uses of the fuels.
+#         to_concat: a dataframe containing the feedstock (main input) and main output of the process.
+#     """
+#     for fuel in ["Diesel", "Electricity", "Natural Gas"]:
+#         lci[fuel] = lci["Energy Consump (mBtu/dry ton)"] * lci[fuel + " %"]
+#     df = pd.melt(
+#         lci,
+#         value_vars=["Diesel", "Electricity", "Natural Gas"],
+#         value_name="Amount",
+#         var_name="Resource",
+#         ignore_index=False,
+#     ).reset_index()
+#     df["Amount"] = df["Amount"] * 1000  # Convert mBtu to Btu
+#     df["Unit"] = "Btu"
+#     df["End Use"] = df["Resource"].map(end_uses)
+#     # df['Category'] = ''
+#     df["Category"] = df["Resource"].str.lower().map(category)
+#     df["Process"] = process_name
+#     df["Type"] = "Input"
+#
+#     df = pd.concat([df, to_concat], ignore_index=True)
+#
+#     return df
+#
+#
+# fuel_economy = pd.read_excel(
+#     "Lookup table_prototyping.xlsx",
+#     sheet_name="Transportation",
+#     skipfooter=34,
+#     index_col=0,
+# ).dropna(axis=1, how="all")
+# fuel_economy = fuel_economy[["Heavy Heavy-Duty Truck"]]
+#
+#
+# def generate_transport_lci(
+#     transport, to_concat=pd.DataFrame(), process="Feedstock transport"
+# ):
+#     to_append = []
+#     for index, row in transport.iterrows():
+#         resource = "Corn Stover_1 leg" if "#1" in index else "Corn Stover_2 leg"
+#         unit = "mile"  # Assuming transport is a series, i.e., there is only one row for transportation
+#         distance = row.at["Distance (mi)"]
+#         payload = row.at["Payload (wet tons)"] * (1 - row.at["MC"])
+#         btu_per_ton_mile = fuel_economy / payload
+#
+#         to_desti_fuel = (
+#             btu_per_ton_mile.at[
+#                 "Trip from Product Origin to Destination", "Heavy Heavy-Duty Truck"
+#             ]
+#             * distance
+#             / 1000000
+#         )  # MMBtu per ton
+#         to_origin_fuel = (
+#             btu_per_ton_mile.at[
+#                 "Trip from Product Destination Back to Origin", "Heavy Heavy-Duty Truck"
+#             ]
+#             * distance
+#             / 1000000
+#         )  # MMBtu per ton
+#         df_trans = pd.DataFrame(
+#             {
+#                 "Type": ["Input"] * 2,
+#                 "Process": [process] * 2,
+#                 "Category": ["Transportation"] * 2,
+#                 "Resource": ["diesel"] * 2,
+#                 "End Use": ["loaded", "empty"],
+#                 "Amount": [to_desti_fuel, to_origin_fuel],
+#                 "Unit": ["mmbtu"] * 2,
+#             }
+#         )
+#
+#         to_append.append(df_trans)
+#
+#     to_append.append(to_concat)
+#
+#     return pd.concat(to_append)
