@@ -138,7 +138,8 @@ app.layout = dbc.Container(
                 dbc.Col(dcc.Graph(id="graph4"), md=6),
             ]
         ),
-        dbc.Row(id='dropdown')
+        dbc.Row(id='dropdown'),
+        dbc.Row(id='datatable')
     ]
 )
 
@@ -199,6 +200,20 @@ def make_waterfall_plot(res, metric='GHG', n=4):
     )
 
     return fig
+
+# @app.callback(
+#     Output('datatable', 'children'),
+#     Input("dropdown", "value"),
+# )
+# def show_datatable(process_to_edit):
+#     df = step_mapping[process_to_edit]    
+#     return [
+#         dash_table.DataTable(
+#             data = df.to_dict('records'),
+#             columns=[{'id': c, 'name': c} for c in df.columns]
+#         )
+#     ]
+
 
 @app.callback(
     Output("results", "data"),
