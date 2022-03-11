@@ -37,4 +37,4 @@ def calc(lci_file):
     res['Resource'] = res['Resource'].str.title()
     res['Resource'] = res['Resource'].str.replace('Wwt', 'WWT').str.replace('Fgd', 'FGD')
 
-    return res
+    return sheet_names, res

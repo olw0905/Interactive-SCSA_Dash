@@ -138,6 +138,7 @@ app.layout = dbc.Container(
                 dbc.Col(dcc.Graph(id="graph4"), md=6),
             ]
         ),
+        dbc.Row(id='dropdown')
     ]
 )
 
@@ -201,6 +202,7 @@ def make_waterfall_plot(res, metric='GHG', n=4):
 
 @app.callback(
     Output("results", "data"),
+    Output("dropdown", "children"),
     Output("upload-data", "contents"),
     Output('renewable_elec', 'value'),
     Input("upload-data", "contents"),
@@ -211,6 +213,7 @@ def make_waterfall_plot(res, metric='GHG', n=4):
 def update_results(contents, n_clicks, filename, date):
     reset_status = False
     update_status = False
+    dropdown_items = []
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -224,7 +227,11 @@ def update_results(contents, n_clicks, filename, date):
         lci_new = parse_contents(contents, filename, date)
         # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
-        res_new = calc(lci_new)
+        sheet_names, res_new = calc(lci_new)
+        dropdown_items = [
+            html.Div(['Edit Life Cycle Inventory Data']),
+            dcc.Dropdown(sheet_names, id='dropdown')
+        ]
         update_status = True
     else:
         res_new = res.copy()
@@ -234,7 +241,7 @@ def update_results(contents, n_clicks, filename, date):
         "pd": res_new.to_json(date_format="iso", orient="split"),
         "r_status": reset_status,
         "p_status": update_status,
-    }, None, 0
+    }, dropdown_items, None, 0
 
 
 @app.callback(
