@@ -13,7 +13,7 @@ import dash_bootstrap_components as dbc
 import plotly.express as px
 import pandas as pd
 import json
-from calc import calc
+from calc import read_data, calc
 
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -242,7 +242,8 @@ def update_results(contents, n_clicks, filename, date):
         lci_new = parse_contents(contents, filename, date)
         # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
-        sheet_names, res_new = calc(lci_new)
+        sheet_names, step_mapping = read_data(lci_new)
+        res_new = calc(step_mapping)
         dropdown_items = [
             html.Div(['Edit Life Cycle Inventory Data']),
             dcc.Dropdown(sheet_names, id='dropdown')
