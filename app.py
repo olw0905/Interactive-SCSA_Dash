@@ -5,7 +5,7 @@ import plotly.graph_objs as go
 import numpy as np
 
 import dash
-from dash import dcc, html, dash_table, MATCH
+from dash import dcc, html, dash_table, MATCH, ALL
 # from dash import html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -53,7 +53,7 @@ res["Input Amount"] = res["Usage"]
 
 app.layout = dbc.Container(
     children=[
-        dcc.Store(id="results"),
+        dcc.Store(id='results'),
         html.H1(children="SCSA LCA Results", className="text-dark"),
         html.H3(
             children="""
@@ -139,7 +139,7 @@ app.layout = dbc.Container(
             ]
         ),
         dbc.Container(id='dropdown'),
-        dbc.Row(id={'type': 'datatable', 'index': 0})
+        dbc.Row(id={'type': 'datatable', 'index': 0}),
     ]
 )
 
@@ -204,7 +204,7 @@ def make_waterfall_plot(res, metric='GHG', n=4):
 @app.callback(
     Output({'type': 'datatable', 'index': MATCH}, 'children'),
     Input({'type': 'process_dropdown', 'index': MATCH}, "value"),
-    State("results", "data")
+    State('results', "data")
 )
 def show_datatable(process_to_edit, stored_data):
     if process_to_edit is None:
@@ -223,21 +223,22 @@ def show_datatable(process_to_edit, stored_data):
 
 
 @app.callback(
-    Output("results", "data"),
+    Output('results', "data"),
     Output("dropdown", "children"),
     Output("upload-data", "contents"),
     Output('renewable_elec', 'value'),
     Input("upload-data", "contents"),
     Input("reset-button", "n_clicks"),
     # Input("update-lci", "n_clicks"),
+    Input({'type': 'update-lci', 'index': ALL}, 'n_clicks'),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
-    State("results", "data")
+    State('results', "data")
 )
 def update_results(
         contents, 
         n_clicks1, 
-        # n_clicks2, 
+        n_clicks2,
         filename, 
         date, 
         stored_data):
@@ -264,7 +265,7 @@ def update_results(
         dropdown_items = [
             dbc.Row([
                 dbc.Col(html.Div(['Edit Life Cycle Inventory Data'])),
-                dbc.Col(dbc.Button("Update", color="Secondary", className="me-1", id="update-lci"))
+                dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id="update-lci"))
         ]),
             dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
         ]
@@ -273,7 +274,7 @@ def update_results(
     #     lci_data = data['lci']
     #     step_mapping = {key: pd.read_json(data[key])} 
     #     ]
-    #     update_status = True
+        update_status = True
     else:
         res_new = res.copy()
 
@@ -295,7 +296,7 @@ def update_results(
     Output("graph4", "figure"),
     Output("reset_status", "is_open"),
     Output("update_status", "is_open"),
-    Input("results", "data"),
+    Input('results', "data"),
     Input("tabs", "active_tab"),
     Input('renewable_elec', 'value'),
     State("reset_status", "is_open"),
@@ -308,7 +309,7 @@ def update_figures(json_data, tab, re, rs, us):
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     # print(ctx.triggered)
-    if changed_id == "results":
+    if changed_id == 'results':
         reset_status = data["r_status"]
         update_status = data["p_status"]
     else:
