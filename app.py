@@ -5,8 +5,8 @@ import plotly.graph_objs as go
 import numpy as np
 
 import dash
-from dash import dcc
-from dash import html
+from dash import dcc, html, dash_table, MATCH
+# from dash import html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -139,7 +139,7 @@ app.layout = dbc.Container(
             ]
         ),
         dbc.Container(id='dropdown'),
-        dbc.Row(id='datatable')
+        dbc.Row(id={'type': 'datatable', 'index': 0})
     ]
 )
 
@@ -202,20 +202,23 @@ def make_waterfall_plot(res, metric='GHG', n=4):
     return fig
 
 @app.callback(
-    Output('datatable', 'children'),
-    Input("process_dropdown", "value"),
+    Output({'type': 'datatable', 'index': MATCH}, 'children'),
+    Input({'type': 'process_dropdown', 'index': MATCH}, "value"),
     State("results", "data")
 )
 def show_datatable(process_to_edit, stored_data):
-    data = json.loads(stored_data)
-    lci_data = data['lci']
-    step_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
-    df = step_mapping[process_to_edit]   
-    return [
-        dash_table.DataTable(
-            data = df.to_dict('records'),
-            columns=[{'id': c, 'name': c} for c in df.columns]
-        )
+    if process_to_edit is None:
+        return []
+    else:
+        data = json.loads(stored_data)
+        lci_data = data['lci']
+        step_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
+        df = step_mapping[process_to_edit.lower()]  
+        return [
+            dash_table.DataTable(
+                data = df.to_dict('records'),
+                columns=[{'id': c, 'name': c} for c in df.columns]
+            )
     ]
 
 
@@ -226,12 +229,18 @@ def show_datatable(process_to_edit, stored_data):
     Output('renewable_elec', 'value'),
     Input("upload-data", "contents"),
     Input("reset-button", "n_clicks"),
-    Input("update-lci", "n_clicks"),
+    # Input("update-lci", "n_clicks"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
     State("results", "data")
 )
-def update_results(contents, n_clicks1, n_clicks2, filename, date, stored_data):
+def update_results(
+        contents, 
+        n_clicks1, 
+        # n_clicks2, 
+        filename, 
+        date, 
+        stored_data):
     reset_status = False
     update_status = False
     dropdown_items = []
@@ -257,7 +266,7 @@ def update_results(contents, n_clicks1, n_clicks2, filename, date, stored_data):
                 dbc.Col(html.Div(['Edit Life Cycle Inventory Data'])),
                 dbc.Col(dbc.Button("Update", color="Secondary", className="me-1", id="update-lci"))
         ]),
-            dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id='process_dropdown')))
+            dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
         ]
     # elif changed_id == "update-lci":
     #     data = json.loads(stored_data)
