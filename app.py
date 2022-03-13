@@ -138,7 +138,7 @@ app.layout = dbc.Container(
                 dbc.Col(dcc.Graph(id="graph4"), md=6),
             ]
         ),
-        dbc.Row(id='dropdown'),
+        dbc.Container(id='dropdown'),
         dbc.Row(id='datatable')
     ]
 )
@@ -201,18 +201,22 @@ def make_waterfall_plot(res, metric='GHG', n=4):
 
     return fig
 
-# @app.callback(
-#     Output('datatable', 'children'),
-#     Input("dropdown", "value"),
-# )
-# def show_datatable(process_to_edit):
-#     df = step_mapping[process_to_edit]    
-#     return [
-#         dash_table.DataTable(
-#             data = df.to_dict('records'),
-#             columns=[{'id': c, 'name': c} for c in df.columns]
-#         )
-#     ]
+@app.callback(
+    Output('datatable', 'children'),
+    Input("process_dropdown", "value"),
+    State("results", "data")
+)
+def show_datatable(process_to_edit, stored_data):
+    data = json.loads(stored_data)
+    lci_data = data['lci']
+    step_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
+    df = step_mapping[process_to_edit]   
+    return [
+        dash_table.DataTable(
+            data = df.to_dict('records'),
+            columns=[{'id': c, 'name': c} for c in df.columns]
+        )
+    ]
 
 
 @app.callback(
@@ -222,13 +226,16 @@ def make_waterfall_plot(res, metric='GHG', n=4):
     Output('renewable_elec', 'value'),
     Input("upload-data", "contents"),
     Input("reset-button", "n_clicks"),
+    Input("update-lci", "n_clicks"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
+    State("results", "data")
 )
-def update_results(contents, n_clicks, filename, date):
+def update_results(contents, n_clicks1, n_clicks2, filename, date, stored_data):
     reset_status = False
     update_status = False
     dropdown_items = []
+    lci_data = {}
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -243,21 +250,33 @@ def update_results(contents, n_clicks, filename, date):
         # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
         sheet_names, step_mapping = read_data(lci_new)
-        res_new = calc(step_mapping)
+        lci_data = {key: value.to_json(orient='split', date_format='iso') for key, value in step_mapping.items()}
+        res_new = calc(sheet_names, step_mapping)
         dropdown_items = [
-            html.Div(['Edit Life Cycle Inventory Data']),
-            dcc.Dropdown(sheet_names, id='dropdown')
+            dbc.Row([
+                dbc.Col(html.Div(['Edit Life Cycle Inventory Data'])),
+                dbc.Col(dbc.Button("Update", color="Secondary", className="me-1", id="update-lci"))
+        ]),
+            dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id='process_dropdown')))
         ]
-        update_status = True
+    # elif changed_id == "update-lci":
+    #     data = json.loads(stored_data)
+    #     lci_data = data['lci']
+    #     step_mapping = {key: pd.read_json(data[key])} 
+    #     ]
+    #     update_status = True
     else:
         res_new = res.copy()
 
     # return res_new.to_json(date_format='iso', orient='split'), reset_status, update_status, None
-    return {
+    data_to_return = {
         "pd": res_new.to_json(date_format="iso", orient="split"),
+        "lci": lci_data,
         "r_status": reset_status,
         "p_status": update_status,
-    }, dropdown_items, None, 0
+    }
+
+    return json.dumps(data_to_return), dropdown_items, None, 0
 
 
 @app.callback(
@@ -273,8 +292,9 @@ def update_results(contents, n_clicks, filename, date):
     State("reset_status", "is_open"),
     State("update_status", "is_open"),
 )
-def update_figures(data, tab, re, rs, us):
+def update_figures(json_data, tab, re, rs, us):
 
+    data = json.loads(json_data)
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 

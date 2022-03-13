@@ -5,15 +5,15 @@ from utils import process, format_input, calculate_lca
 category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
 def read_data(lci_file):
-'''
-    Read the content of the LCI file to generate a dictionary for use in the calc fuction.
+    '''
+        Read the content of the LCI file to generate a dictionary for use in the calc fuction.
 
-    Parameters:
-        lci_file: the uploaded LCI file.
+        Parameters:
+            lci_file: the uploaded LCI file.
 
-    Return:
-        step_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
-'''
+        Return:
+            step_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
+    '''
     xl = pd.ExcelFile(lci_file)
     sheet_names = xl.sheet_names
 
@@ -26,7 +26,7 @@ def read_data(lci_file):
     return sheet_names, step_mapping
 
 
-def calc(step_mapping):
+def calc(sheet_names, step_mapping):
 
     lcis = process(step_mapping)
 
