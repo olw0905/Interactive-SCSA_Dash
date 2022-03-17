@@ -51,7 +51,48 @@ res = calculate(lci)
 res["Resource"] = res["Input"]
 res["Input Amount"] = res["Usage"]
 
-app.layout = dbc.Container(
+
+SIDEBAR_STYLE = {
+    "position": "fixed",
+    "top": 0,
+    "left": 0,
+    "bottom": 0,
+    "width": "16rem",
+    "padding": "2rem 1rem",
+    "background-color": "#f8f9fa",
+}
+
+CONTENT_STYLE = {
+    "margin-left": "8rem",
+    "margin-right": "2rem",
+    "padding": "2rem 1rem",
+}
+
+# sidebar = html.Div(
+sidebar = dbc.Container(
+    [
+        html.H2("SCSA Pathways", className="display-5"),
+        html.Hr(),
+        # html.P(
+        #     "A simple sidebar layout with navigation links", className="lead"
+        # ),
+        dbc.Nav(
+            [
+                dbc.NavLink("Biochemical Conversion", href="/", active="exact"),
+                dbc.NavLink("Catalytic Fast Pyrolysis", href="/1", active="exact"),
+                dbc.NavLink("Indirect Hydrothermal Liquefaction", href="/1", active="exact"),
+                dbc.NavLink("Combined Algae Processing", href="/page-1", active="exact"),
+                dbc.NavLink("Algae Hydrothermal Liquefaction", href="/page-2", active="exact"),
+                dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="/page-2", active="exact"),
+            ],
+            vertical=True,
+            pills=True,
+        ),
+    ],
+    style=SIDEBAR_STYLE,
+)
+# app.layout = dbc.Container(
+content = dbc.Container(
     children=[
         dcc.Store(id='results'),
         html.H1(children="SCSA LCA Results", className="text-dark"),
@@ -140,8 +181,10 @@ app.layout = dbc.Container(
         ),
         dbc.Container(id='dropdown'),
         dbc.Row(id={'type': 'datatable', 'index': 0}),
-    ]
+    ], style=CONTENT_STYLE, fluid=True
 )
+
+app.layout = dbc.Container([sidebar, content])
 
 
 def parse_contents(contents, filename, date):
