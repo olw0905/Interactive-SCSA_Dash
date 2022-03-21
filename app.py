@@ -52,139 +52,189 @@ res["Resource"] = res["Input"]
 res["Input Amount"] = res["Usage"]
 
 
-SIDEBAR_STYLE = {
-    "position": "fixed",
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
-    "width": "16rem",
-    "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
-}
+# SIDEBAR_STYLE = {
+#     "position": "fixed",
+#     "top": 0,
+#     "left": 0,
+#     "bottom": 0,
+#     "width": "16rem",
+#     "padding": "2rem 1rem",
+#     "background-color": "#f8f9fa",
+# }
 
-CONTENT_STYLE = {
-    "margin-left": "8rem",
-    "margin-right": "2rem",
-    "padding": "2rem 1rem",
-}
+# CONTENT_STYLE = {
+#     "margin-left": "8rem",
+#     "margin-right": "2rem",
+#     "padding": "2rem 1rem",
+# }
 
 # sidebar = html.Div(
-sidebar = dbc.Container(
+# sidebar = dbc.Container(
+#     [
+#         html.H2("SOT Pathways", className="display-5"),
+#         html.Hr(),
+#         # html.P(
+#         #     "A simple sidebar layout with navigation links", className="lead"
+#         # ),
+#         dbc.Nav(
+#             [
+#                 dbc.NavLink("Biochemical Conversion", href="/", active="exact"),
+#                 dbc.NavLink("Catalytic Fast Pyrolysis", href="/1", active="exact"),
+#                 dbc.NavLink("Indirect Hydrothermal Liquefaction", href="/1", active="exact"),
+#                 dbc.NavLink("Combined Algae Processing", href="/page-1", active="exact"),
+#                 dbc.NavLink("Algae Hydrothermal Liquefaction", href="/page-2", active="exact"),
+#                 dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="/page-2", active="exact"),
+#             ],
+#             vertical=True,
+#             pills=True,
+#         ),
+#     ],
+#     style=SIDEBAR_STYLE,
+# )
+nav_item = dbc.Nav(
     [
-        html.H2("SCSA Pathways", className="display-5"),
-        html.Hr(),
-        # html.P(
-        #     "A simple sidebar layout with navigation links", className="lead"
-        # ),
-        dbc.Nav(
-            [
-                dbc.NavLink("Biochemical Conversion", href="/", active="exact"),
-                dbc.NavLink("Catalytic Fast Pyrolysis", href="/1", active="exact"),
-                dbc.NavLink("Indirect Hydrothermal Liquefaction", href="/1", active="exact"),
-                dbc.NavLink("Combined Algae Processing", href="/page-1", active="exact"),
-                dbc.NavLink("Algae Hydrothermal Liquefaction", href="/page-2", active="exact"),
-                dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="/page-2", active="exact"),
-            ],
-            vertical=True,
-            pills=True,
-        ),
+        dbc.NavItem(dbc.NavLink("Biochemical Conversion", href="#")),
+        dbc.NavItem(dbc.NavLink("Catalytic Fast Pyrolysis", href="#")),
+        dbc.NavItem(dbc.NavLink("Indirect Hydrothermal Liquefaction", href="#")),
+        dbc.NavItem(dbc.NavLink("Combined Algae Processing", href="#")),
+        dbc.NavItem(dbc.NavLink("Algae Hydrothermal Liquefaction", href="#")),
+        dbc.NavItem(dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="#")),
     ],
-    style=SIDEBAR_STYLE,
-)
-# app.layout = dbc.Container(
-content = dbc.Container(
-    children=[
-        dcc.Store(id='results'),
-        html.H1(children="SCSA LCA Results", className="text-dark"),
-        html.H3(
-            children="""
-        RD Production from Corn Stover via Biochem Pathway
-    """,
-            className="text-muted text-decoration-underline",
-        ),
-        html.Hr(),
-        dbc.Alert(
-            html.H4("Reset completed!", className="alert-heading"),
-            id="reset_status",
-            color="info",
-            style={"textAlign": "center"},
-            dismissable=True,
-            is_open=False,
-        ),
-        dbc.Alert(
-            html.H4("The results have been updated!", className="alert-heading"),
-            id="update_status",
-            color="success",
-            style={"textAlign": "center"},
-            dismissable=True,
-            is_open=False,
-        ),
-        dcc.Upload(
-            id="upload-data",
-            children=html.Div(
-                ["Drag and Drop or ", html.A("Select Files", className="link-primary")]
-            ),
-            style={
-                "width": "100%",
-                "height": "60px",
-                "lineHeight": "60px",
-                "borderWidth": "1px",
-                "borderStyle": "dashed",
-                "borderRadius": "5px",
-                "textAlign": "center",
-                "margin": "10px",
-            },
-            # Allow multiple files to be uploaded
-            multiple=False,
-        ),
-        dbc.Button(
-            "Reset", color="primary", className="me-1", id="reset-button", n_clicks=0
-        ),
-        dbc.Row(
-            dbc.Col(
-                [
-                    html.H5("Renewable Electricity %"),
-                    dcc.Slider(0, 1, 
-                    step=None,
-                    marks = {
-                        val: '{:.0%}'.format(val) for val in np.linspace(0, 1, 11)
-                    },
-                    value=0,
-                    id='renewable_elec'
-                    )
-                    ],
-                    width={"size": 6, "offset": 3}
-               )),
-        dbc.Tabs(
-            [
-                dbc.Tab(
-                    label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"
-                ),
-                dbc.Tab(
-                    label="NOx", tab_id="NOx", activeTabClassName="fw-bold fst-italic"
-                ),
-            ],
-            id="tabs",
-            active_tab="GHG",
-        ),
-        dbc.Row(
-            [
-                dbc.Col(dcc.Graph(id="graph1"), md=6),
-                dbc.Col(dcc.Graph(id="graph2"), md=6),
-            ]
-        ),
-        dbc.Row(
-            [
-                dbc.Col(dcc.Graph(id="graph3"), md=6),
-                dbc.Col(dcc.Graph(id="graph4"), md=6),
-            ]
-        ),
-        dbc.Container(id='dropdown'),
-        dbc.Row(id={'type': 'datatable', 'index': 0}),
-    ], style=CONTENT_STYLE, fluid=True
+    vertical='md',
+    pills=True
 )
 
-app.layout = dbc.Container([sidebar, content])
+navbar = dbc.Navbar(
+    dbc.Container(
+        [
+            dbc.NavbarBrand("Custom default", href="#"),
+            dbc.NavbarToggler(id="navbar-toggler1"),
+            dbc.Collapse(
+                dbc.Nav(
+                    [
+                        nav_item, 
+                        # dropdown
+                    ],
+                    # className="ms-auto", 
+                    # navbar=True
+                ),
+                id="navbar-collapse1",
+                navbar=True,
+            ),
+        ]
+    ),
+    # className="mb-5",
+    color='white'
+)
+
+# app.layout = dbc.Container(
+# content = dbc.Container(
+# children=[
+content = [
+    dcc.Store(id='results'),
+    html.H1(children="SOT LCA Results", className="text-dark"),
+    html.H3(
+        children="""
+    RD Production from Corn Stover via Biochem Pathway
+""",
+        className="text-muted text-decoration-underline",
+    ),
+    html.Hr(),
+    dbc.Alert(
+        html.H4("Reset completed!", className="alert-heading"),
+        id="reset_status",
+        color="info",
+        style={"textAlign": "center"},
+        dismissable=True,
+        is_open=False,
+    ),
+    dbc.Alert(
+        html.H4("The results have been updated!", className="alert-heading"),
+        id="update_status",
+        color="success",
+        style={"textAlign": "center"},
+        dismissable=True,
+        is_open=False,
+    ),
+    dcc.Upload(
+        id="upload-data",
+        children=html.Div(
+            ["Drag and Drop or ", html.A("Select Files", className="link-primary")]
+        ),
+        style={
+            "width": "100%",
+            "height": "60px",
+            "lineHeight": "60px",
+            "borderWidth": "1px",
+            "borderStyle": "dashed",
+            "borderRadius": "5px",
+            "textAlign": "center",
+            "margin": "10px",
+        },
+        # Allow multiple files to be uploaded
+        multiple=False,
+    ),
+    dbc.Button(
+        "Reset", color="primary", className="me-1", id="reset-button", n_clicks=0
+    ),
+    dbc.Row(
+        dbc.Col(
+            [
+                html.H5("Renewable Electricity %"),
+                dcc.Slider(0, 1, 
+                step=None,
+                marks = {
+                    val: '{:.0%}'.format(val) for val in np.linspace(0, 1, 11)
+                },
+                value=0,
+                id='renewable_elec'
+                )
+                ],
+                width={"size": 6, "offset": 3}
+           )),
+    dbc.Tabs(
+        [
+            dbc.Tab(
+                label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"
+            ),
+            dbc.Tab(
+                label="NOx", tab_id="NOx", activeTabClassName="fw-bold fst-italic"
+            ),
+        ],
+        id="tabs",
+        active_tab="GHG",
+    ),
+    dbc.Row(
+        [
+            dbc.Col(dcc.Graph(id="graph1"), md=6),
+            dbc.Col(dcc.Graph(id="graph2"), md=6),
+        ]
+    ),
+    dbc.Row(
+        [
+            dbc.Col(dcc.Graph(id="graph3"), md=6),
+            dbc.Col(dcc.Graph(id="graph4"), md=6),
+        ]
+    ),
+    dbc.Container(id='dropdown'),
+    dbc.Row(id={'type': 'datatable', 'index': 0}),
+]
+# ,
+    # style=CONTENT_STYLE, fluid=True
+# )
+
+# app.layout = dbc.Container([sidebar, content])
+app.layout = dbc.Container(
+    [
+        dbc.Row(
+            [
+                dbc.Col(navbar, md=4),
+                dbc.Col(content, width='auto')
+            ]
+        )        
+    ],
+    fluid=True
+)
 
 
 def parse_contents(contents, filename, date):
