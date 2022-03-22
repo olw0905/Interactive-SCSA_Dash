@@ -3,6 +3,7 @@
 # TODO: change input to resource
 # TODO: add fuctions to add input from other processes and main output
 # TODO: use end_use_dict
+# TODO: check the functional unit
 import pandas as pd
 
 # from lookup_table import lookup_table
@@ -321,6 +322,7 @@ def calculate_lca(df_lci):
 
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
+        res[metric + "_Sum"] = res[metric + "_Sum"] / 1055.055853    # Convert the functional unit from mmBtu to MJ
 
     return res
 
