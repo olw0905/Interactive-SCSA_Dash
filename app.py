@@ -1,5 +1,5 @@
 import base64
-import datetime
+# import datetime
 import io
 import plotly.graph_objs as go
 import numpy as np
@@ -8,7 +8,7 @@ import dash
 from dash import dcc, html, dash_table, MATCH, ALL
 # from dash import html
 from dash.dependencies import Input, Output, State
-from dash.exceptions import PreventUpdate
+# from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import pandas as pd
@@ -52,53 +52,21 @@ res["Resource"] = res["Input"]
 res["Input Amount"] = res["Usage"]
 
 
-# SIDEBAR_STYLE = {
-#     "position": "fixed",
-#     "top": 0,
-#     "left": 0,
-#     "bottom": 0,
-#     "width": "16rem",
-#     "padding": "2rem 1rem",
-#     "background-color": "#f8f9fa",
-# }
-
-# CONTENT_STYLE = {
-#     "margin-left": "8rem",
-#     "margin-right": "2rem",
-#     "padding": "2rem 1rem",
-# }
-
-# sidebar = html.Div(
-# sidebar = dbc.Container(
-#     [
-#         html.H2("SOT Pathways", className="display-5"),
-#         html.Hr(),
-#         # html.P(
-#         #     "A simple sidebar layout with navigation links", className="lead"
-#         # ),
-#         dbc.Nav(
-#             [
-#                 dbc.NavLink("Biochemical Conversion", href="/", active="exact"),
-#                 dbc.NavLink("Catalytic Fast Pyrolysis", href="/1", active="exact"),
-#                 dbc.NavLink("Indirect Hydrothermal Liquefaction", href="/1", active="exact"),
-#                 dbc.NavLink("Combined Algae Processing", href="/page-1", active="exact"),
-#                 dbc.NavLink("Algae Hydrothermal Liquefaction", href="/page-2", active="exact"),
-#                 dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="/page-2", active="exact"),
-#             ],
-#             vertical=True,
-#             pills=True,
-#         ),
-#     ],
-#     style=SIDEBAR_STYLE,
-# )
 nav_item = dbc.Nav(
     [
-        dbc.NavItem(dbc.NavLink("Biochemical Conversion", href="#")),
-        dbc.NavItem(dbc.NavLink("Catalytic Fast Pyrolysis", href="#")),
-        dbc.NavItem(dbc.NavLink("Indirect Hydrothermal Liquefaction", href="#")),
-        dbc.NavItem(dbc.NavLink("Combined Algae Processing", href="#")),
-        dbc.NavItem(dbc.NavLink("Algae Hydrothermal Liquefaction", href="#")),
-        dbc.NavItem(dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="#")),
+        dbc.NavItem(html.Br(), className="d-none d-md-block"),
+        dbc.NavItem(html.Br(), className="d-none d-md-block"),
+        dbc.NavItem(html.H2('SOT Pathways'), className="d-none d-md-block"),
+        # dbc.NavItem(dbc.NavLink("")),
+        dbc.NavItem(html.Hr(), className="d-none d-md-block"),
+        dbc.NavItem(html.Br()),
+        # dbc.NavItem(dbc.NavLink("Test")),
+        dbc.NavItem(dbc.NavLink("Biochemical Conversion", href="/", active=True)),
+        dbc.NavItem(dbc.NavLink("Catalytic Fast Pyrolysis", href="#", active="exact")),
+        dbc.NavItem(dbc.NavLink("Indirect Hydrothermal Liquefaction", href="#", active="exact")),
+        dbc.NavItem(dbc.NavLink("Combined Algae Processing", href="#", active="exact")),
+        dbc.NavItem(dbc.NavLink("Algae Hydrothermal Liquefaction", href="#", active="exact")),
+        dbc.NavItem(dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="#", active="exact")),
     ],
     vertical='md',
     pills=True
@@ -107,24 +75,35 @@ nav_item = dbc.Nav(
 navbar = dbc.Navbar(
     dbc.Container(
         [
-            dbc.NavbarBrand("Custom default", href="#"),
-            dbc.NavbarToggler(id="navbar-toggler1"),
+            dbc.NavbarBrand(
+                "SOT Pathways",
+                id="navbar-brand", 
+                href="#", 
+                className='d-md-none',
+                # style={'overflow': 'hidden'}
+            ),
+            dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
             dbc.Collapse(
-                dbc.Nav(
-                    [
-                        nav_item, 
-                        # dropdown
-                    ],
-                    # className="ms-auto", 
-                    # navbar=True
-                ),
-                id="navbar-collapse1",
+                [
+                    dbc.Nav(
+                        [
+                            nav_item,
+                        ],
+                        # className="ms-auto",
+                        navbar=True,
+                        # id='navbar-content',
+                        # style={'width': '50%', 'margin-left': "50px", 'padding': "0px", 'clear': 'left'}
+                    )
+                ],
+                id="navbar-collapse",
                 navbar=True,
             ),
         ]
     ),
-    # className="mb-5",
-    color='white'
+    # className="mb-5 border-bottom",
+    color='white',
+    # expand='lg',
+    # style={'width':'100%'}
 )
 
 # app.layout = dbc.Container(
@@ -132,6 +111,7 @@ navbar = dbc.Navbar(
 # children=[
 content = [
     dcc.Store(id='results'),
+    html.Br(),
     html.H1(children="SOT LCA Results", className="text-dark"),
     html.H3(
         children="""
@@ -156,7 +136,8 @@ content = [
         dismissable=True,
         is_open=False,
     ),
-    dcc.Upload(
+    dbc.Row([
+    dbc.Col(dcc.Upload(
         id="upload-data",
         children=html.Div(
             ["Drag and Drop or ", html.A("Select Files", className="link-primary")]
@@ -173,14 +154,15 @@ content = [
         },
         # Allow multiple files to be uploaded
         multiple=False,
-    ),
-    dbc.Button(
-        "Reset", color="primary", className="me-1", id="reset-button", n_clicks=0
-    ),
+    )),
+    dbc.Col(dbc.Button(
+                "Reset", color="primary", className="me-1", id="reset-button", n_clicks=0, style={'margin': '10px'}
+    ), width='auto', className='align-self-center')
+            ]),
     dbc.Row(
         dbc.Col(
             [
-                html.H5("Renewable Electricity %"),
+                html.H5("Renewable Electricity %", className='text-center'),
                 dcc.Slider(0, 1, 
                 step=None,
                 marks = {
@@ -190,7 +172,7 @@ content = [
                 id='renewable_elec'
                 )
                 ],
-                width={"size": 6, "offset": 3}
+                # width={"size": 6, "offset": 3}
            )),
     dbc.Tabs(
         [
@@ -208,32 +190,28 @@ content = [
         [
             dbc.Col(dcc.Graph(id="graph1"), md=6),
             dbc.Col(dcc.Graph(id="graph2"), md=6),
-        ]
+        ], style={'width': '100%'}
     ),
     dbc.Row(
         [
             dbc.Col(dcc.Graph(id="graph3"), md=6),
             dbc.Col(dcc.Graph(id="graph4"), md=6),
-        ]
+        ], style={'width': '100%'}
     ),
     dbc.Container(id='dropdown'),
     dbc.Row(id={'type': 'datatable', 'index': 0}),
 ]
-# ,
-    # style=CONTENT_STYLE, fluid=True
-# )
 
-# app.layout = dbc.Container([sidebar, content])
 app.layout = dbc.Container(
     [
         dbc.Row(
             [
-                dbc.Col(navbar, md=4),
-                dbc.Col(content, width='auto')
+                dbc.Col(navbar, md=3),
+                dbc.Col(content, md=9, className='mt-10')
             ]
         )        
     ],
-    fluid=True
+    # fluid=True
 )
 
 
@@ -314,6 +292,18 @@ def show_datatable(process_to_edit, stored_data):
             )
     ]
 
+# add callback for toggling the collapse on small screens
+@app.callback(
+    Output("navbar-collapse", "is_open"),
+    # Output("navbar-content", "children"),
+    # Output("navbar-brand", "children"),
+    Input("navbar-toggler", "n_clicks"),
+    State("navbar-collapse", "is_open"),
+)
+def toggle_navbar_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
 
 @app.callback(
     Output('results', "data"),
