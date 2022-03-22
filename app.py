@@ -409,7 +409,7 @@ def update_figures(json_data, tab, re, rs, us):
     fig1_new.update_traces(marker_line_width=0)
     fig1_new.update_layout(title='Breakdown of GHG Emissions by Process')
     fig1_new.update_xaxes(title='Process')
-    fig1_new.update_yaxes(title='GHG Emissions (g CO2e/mmBtu)')
+    fig1_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
     fig2_new = make_waterfall_plot(res_new, tab)
     # fig2_new = px.bar(
@@ -421,12 +421,12 @@ def update_figures(json_data, tab, re, rs, us):
     # )
     fig2_new.update_layout(title='Waterfall Chart of GHG Emissions by Inputs')
     # fig2_new.update_xaxes(title='Process')
-    fig2_new.update_yaxes(title='GHG Emissions (g CO2e/mmBtu)')
+    fig2_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
     fig3_new = px.pie(res_new, values=tab + "_Sum", names="Category")
     fig3_new.update_layout(title='% Contribution to GHG Emissions')
     # fig3_new.update_xaxes(title='Process')
-    # fig3_new.update_yaxes(title='GHG Emissions (g CO2e/mmBtu)')
+    # fig3_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
     fig4_new = px.treemap(
         res_new,
@@ -436,7 +436,7 @@ def update_figures(json_data, tab, re, rs, us):
     )
     fig4_new.update_layout(title='Breakdown of GHG Emissions by Inputs')
     # fig4_new.update_xaxes(title='Process')
-    # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/mmBtu)')
+    # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
     return fig1_new, fig2_new, fig3_new, fig4_new, reset_status, update_status
 
