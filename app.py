@@ -289,7 +289,25 @@ def show_datatable(process_to_edit, stored_data):
         return [
             dash_table.DataTable(
                 data = df.to_dict('records'),
-                columns=[{'id': c, 'name': c} for c in df.columns]
+                columns=[{'id': c, 'name': c} for c in df.columns],
+                fixed_rows={'headers': True},
+                style_cell={
+                    'minWidth': 95,
+                    'maxWidth': 95,
+                    'width': 95,
+                    'whiteSpace': 'normal',
+                    'height': 'auto',
+                    'lineHeight': '15px',
+                },
+                style_table={
+                    'height': 400
+                },
+                tooltip_data=[
+                    {
+                        column: {'value': str(value), 'type': 'markdown'} for column, value in row.items()
+                    } for row in df.to_dict('records')
+                ],
+                tooltip_duration=None
             )
     ]
 
@@ -442,4 +460,4 @@ def update_figures(json_data, tab, re, rs, us):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, port=8888)
