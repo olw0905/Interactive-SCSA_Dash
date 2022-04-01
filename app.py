@@ -5,7 +5,9 @@ import plotly.graph_objs as go
 import numpy as np
 
 import dash
-from dash import dcc, html, dash_table, MATCH, ALL
+from dash import dcc, html, MATCH, ALL
+from dash.dash_table import DataTable, FormatTemplate
+from dash.dash_table.Format import Format, Scheme, Trim
 # from dash import html
 from dash.dependencies import Input, Output, State
 # from dash.exceptions import PreventUpdate
@@ -286,10 +288,16 @@ def show_datatable(process_to_edit, stored_data):
         lci_data = data['lci']
         step_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
         df = step_mapping[process_to_edit.lower()]  
+        cols = [{'id': c, 'name': c} for c in df.columns]
+        for col in cols:
+            if col['name'] == 'Amount':
+                col['type'] = 'numeric'
+                col['format'] = Format(precision=2, scheme=Scheme.decimal_or_exponent)
         return [
-            dash_table.DataTable(
+            DataTable(
                 data = df.to_dict('records'),
-                columns=[{'id': c, 'name': c} for c in df.columns],
+                # columns=[{'id': c, 'name': c} for c in df.columns],
+                columns=cols,
                 fixed_rows={'headers': True},
                 style_cell={
                     'minWidth': 95,
@@ -299,8 +307,19 @@ def show_datatable(process_to_edit, stored_data):
                     'height': 'auto',
                     'lineHeight': '15px',
                 },
+                style_header={
+                    'backgroundColor': 'rgb(210, 210, 210)',
+                    'fontWeight': 'bold',
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgb(220, 220, 220)'
+                    }
+                ],
                 style_table={
-                    'height': 400
+                    'height': 400,
+                    'overflowX': 'auto',
                 },
                 tooltip_data=[
                     {
