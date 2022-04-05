@@ -203,6 +203,7 @@ content = [
     ),
     dbc.Container(id='dropdown'),
     dbc.Row(id={'type': 'datatable', 'index': 0}),
+    html.Div('haha', id='debugging'),
 ]
 
 app.layout = dbc.Container(
@@ -295,6 +296,7 @@ def show_datatable(process_to_edit, stored_data):
                 col['format'] = Format(precision=2, scheme=Scheme.decimal_or_exponent)
         return [
             DataTable(
+                id = {'type': 'lci_datatable', 'index': 0},
                 data = df.to_dict('records'),
                 # columns=[{'id': c, 'name': c} for c in df.columns],
                 columns=cols,
@@ -476,6 +478,57 @@ def update_figures(json_data, tab, re, rs, us):
     # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
     return fig1_new, fig2_new, fig3_new, fig4_new, reset_status, update_status
+
+@app.callback(
+    Output('debugging', 'children'),
+    # Input({'type': 'update-lci', 'index': ALL}, 'n_clicks'),
+    Input('update-lci', 'n_clicks'),
+    State({'type': 'lci_datatable', 'index': ALL}, 'data'),
+    )
+def show_debugging(clicks, data):
+    print('test')
+    print(clicks, data)
+    if len(data)==0:
+        return ''
+    # return pd.DataFrame(data[0])
+    df = pd.DataFrame(data[0])
+    print(df)
+    return df.iloc[0, 0]
+    # return DataTable(
+    #             # id = {'type': 'lci_datatable', 'index': 0},
+    #             data = df.to_dict('records'),
+    #             # columns=[{'id': c, 'name': c} for c in df.columns],
+    #             columns=cols,
+    #             fixed_rows={'headers': True},
+    #             style_cell={
+    #                 'minWidth': 95,
+    #                 'maxWidth': 95,
+    #                 'width': 95,
+    #                 'whiteSpace': 'normal',
+    #                 'height': 'auto',
+    #                 'lineHeight': '15px',
+    #             },
+    #             style_header={
+    #                 'backgroundColor': 'rgb(210, 210, 210)',
+    #                 'fontWeight': 'bold',
+    #             },
+    #             style_data_conditional=[
+    #                 {
+    #                     'if': {'row_index': 'odd'},
+    #                     'backgroundColor': 'rgb(220, 220, 220)'
+    #                 }
+    #             ],
+    #             style_table={
+    #                 'height': 400,
+    #                 'overflowX': 'auto',
+    #             },
+    #             tooltip_data=[
+    #                 {
+    #                     column: {'value': str(value), 'type': 'markdown'} for column, value in row.items()
+    #                 } for row in df.to_dict('records')
+    #             ],
+    #             tooltip_duration=None
+    #         )
 
 
 if __name__ == "__main__":
