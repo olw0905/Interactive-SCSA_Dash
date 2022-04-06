@@ -16,6 +16,7 @@ import plotly.express as px
 import pandas as pd
 import json
 from calc import read_data, calc
+from utils import format_input
 
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -288,7 +289,7 @@ def show_datatable(process_to_edit, stored_data):
         data = json.loads(stored_data)
         lci_data = data['lci']
         step_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
-        df = step_mapping[process_to_edit.lower()]  
+        df = step_mapping[process_to_edit]  
         cols = [{'id': c, 'name': c} for c in df.columns]
         for col in cols:
             if col['name'] == 'Amount':
@@ -382,9 +383,13 @@ def update_results(
         lci_new = parse_contents(contents, filename, date)
         # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
-        sheet_names, step_mapping = read_data(lci_new)
-        lci_data = {key: value.to_json(orient='split', date_format='iso') for key, value in step_mapping.items()}
+        lci_mapping = read_data(lci_new)
+
+        sheet_names = list(lci_mapping.keys())
+        step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
+        lci_data = {key: value.to_json(orient='split', date_format='iso') for key, value in lci_mapping.items()}
         res_new = calc(sheet_names, step_mapping)
+
         dropdown_items = [
             dbc.Row([
                 dbc.Col(html.Div(['Edit Life Cycle Inventory Data'])),

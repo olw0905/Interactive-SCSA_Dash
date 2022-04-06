@@ -12,18 +12,18 @@ def read_data(lci_file):
             lci_file: the uploaded LCI file.
 
         Return:
-            step_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
+            lci_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
     '''
     xl = pd.ExcelFile(lci_file)
     sheet_names = xl.sheet_names
 
-    step_mapping = dict()
+    lci_mapping = dict()
     for sheet in sheet_names:
         df = pd.read_excel(lci_file, sheet_name=sheet)
-        df = format_input(df)
-        step_mapping.update({sheet.lower(): df})
+        # df = format_input(df)
+        lci_mapping.update({sheet: df})
 
-    return sheet_names, step_mapping
+    return lci_mapping
 
 
 def calc(sheet_names, step_mapping):
@@ -45,7 +45,6 @@ def calc(sheet_names, step_mapping):
         else a["Resource"] + "_" + a["End Use"],
         axis=1,
     )
-
     res = calculate_lca(overall_lci)
     res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
     res['Resource'] = res['Resource'].str.title()
