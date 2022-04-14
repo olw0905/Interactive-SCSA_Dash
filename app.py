@@ -203,8 +203,7 @@ content = [
         ], style={'width': '100%'}
     ),
     dbc.Container(id='dropdown'),
-    dbc.Row(id={'type': 'datatable', 'index': 0}),
-    html.Div('haha', id='debugging'),
+    dbc.Row(id={'type': 'datatable', 'index': 0}, className='mb-5'),
 ]
 
 app.layout = dbc.Container(
@@ -280,17 +279,18 @@ def make_waterfall_plot(res, metric='GHG', n=4):
 @app.callback(
     Output({'type': 'datatable', 'index': MATCH}, 'children'),
     Input({'type': 'process_dropdown', 'index': MATCH}, "value"),
-    State('results', "data")
+    State('results', "data"),
+    State("reset_status", "is_open"),
 )
-def show_datatable(process_to_edit, stored_data):
-    if process_to_edit is None:
+def show_datatable(process_to_edit, stored_data, rs):
+    if (process_to_edit is None) or (rs):
         return []
     else:
         data = json.loads(stored_data)
         lci_data = data['lci']
-        step_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
-        df = step_mapping[process_to_edit]  
-        cols = [{'id': c, 'name': c} for c in df.columns]
+        lci_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
+        df = lci_mapping[process_to_edit]  
+        cols = [{'id': c, 'name': c, 'editable': (c=='Amount')} for c in df.columns]
         for col in cols:
             if col['name'] == 'Amount':
                 col['type'] = 'numeric'
@@ -318,6 +318,10 @@ def show_datatable(process_to_edit, stored_data):
                     {
                         'if': {'row_index': 'odd'},
                         'backgroundColor': 'rgb(220, 220, 220)'
+                    },
+                    {
+                        'if': {'column_editable': True},
+                        'color': 'blue'
                     }
                 ],
                 style_table={
@@ -357,7 +361,9 @@ def toggle_navbar_collapse(n, is_open):
     Input({'type': 'update-lci', 'index': ALL}, 'n_clicks'),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
-    State('results', "data")
+    State('results', "data"),
+    State({'type': 'lci_datatable', 'index': ALL}, 'data'),
+    State({'type': 'process_dropdown', 'index': ALL}, "value"),
 )
 def update_results(
         contents, 
@@ -365,7 +371,10 @@ def update_results(
         n_clicks2,
         filename, 
         date, 
-        stored_data):
+        stored_data,
+        data_table,
+        process_to_edit
+    ):
     reset_status = False
     update_status = False
     dropdown_items = []
@@ -379,30 +388,46 @@ def update_results(
         reset_status = True
         # return res.to_json(date_format='iso', orient='split'), reset_status, update_status
 
-    elif contents:
-        lci_new = parse_contents(contents, filename, date)
-        # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
+    elif contents or 'update-lci' in changed_id:
+        if contents:
+            lci_new = parse_contents(contents, filename, date)
+            # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
-        lci_mapping = read_data(lci_new)
+            lci_mapping = read_data(lci_new)
+            dropdown_value = None
 
-        sheet_names = list(lci_mapping.keys())
-        step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
+            # sheet_names = list(lci_mapping.keys())
+            # step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
+        else:
+            data = json.loads(stored_data)
+            lci_data = data['lci']
+            lci_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
+            # sheet_names = list(lci_mapping.keys())
+            lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
+            dropdown_value = process_to_edit[0]
+        
         lci_data = {key: value.to_json(orient='split', date_format='iso') for key, value in lci_mapping.items()}
-        res_new = calc(sheet_names, step_mapping)
-
+        # res_new = calc(sheet_names, step_mapping)
+        res_new = calc(lci_mapping)
         dropdown_items = [
             dbc.Row([
-                dbc.Col(html.Div(['Edit Life Cycle Inventory Data'])),
-                dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id="update-lci"))
+                dbc.Col(html.H5(['Edit Life Cycle Inventory Data'])),
+                # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
         ]),
-            dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
+            # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
+            dbc.Row([
+                        dbc.Col(dcc.Dropdown(list(lci_mapping.keys()), id={'type': 'process_dropdown', 'index': 0}, value=dropdown_value)),
+                        dbc.Col(dbc.Button("Update", color="success", className="mb-3", id={'type': 'update-lci', 'index': 0}), width='auto')
+                    ])
         ]
-    # elif changed_id == "update-lci":
-    #     data = json.loads(stored_data)
-    #     lci_data = data['lci']
-    #     step_mapping = {key: pd.read_json(data[key])} 
-    #     ]
         update_status = True
+
+    # elif 'update-lci' in changed_id:
+    #     # step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
+    #     # res_new = calc(sheet_names, step_mapping)
+    #     res_new = calc(lci_mapping)
+    #     update_status = True
+
     else:
         res_new = res.copy()
 
@@ -484,56 +509,56 @@ def update_figures(json_data, tab, re, rs, us):
 
     return fig1_new, fig2_new, fig3_new, fig4_new, reset_status, update_status
 
-@app.callback(
-    Output('debugging', 'children'),
-    # Input({'type': 'update-lci', 'index': ALL}, 'n_clicks'),
-    Input('update-lci', 'n_clicks'),
-    State({'type': 'lci_datatable', 'index': ALL}, 'data'),
-    )
-def show_debugging(clicks, data):
-    print('test')
-    print(clicks, data)
-    if len(data)==0:
-        return ''
-    # return pd.DataFrame(data[0])
-    df = pd.DataFrame(data[0])
-    print(df)
-    return df.iloc[0, 0]
-    # return DataTable(
-    #             # id = {'type': 'lci_datatable', 'index': 0},
-    #             data = df.to_dict('records'),
-    #             # columns=[{'id': c, 'name': c} for c in df.columns],
-    #             columns=cols,
-    #             fixed_rows={'headers': True},
-    #             style_cell={
-    #                 'minWidth': 95,
-    #                 'maxWidth': 95,
-    #                 'width': 95,
-    #                 'whiteSpace': 'normal',
-    #                 'height': 'auto',
-    #                 'lineHeight': '15px',
-    #             },
-    #             style_header={
-    #                 'backgroundColor': 'rgb(210, 210, 210)',
-    #                 'fontWeight': 'bold',
-    #             },
-    #             style_data_conditional=[
-    #                 {
-    #                     'if': {'row_index': 'odd'},
-    #                     'backgroundColor': 'rgb(220, 220, 220)'
-    #                 }
-    #             ],
-    #             style_table={
-    #                 'height': 400,
-    #                 'overflowX': 'auto',
-    #             },
-    #             tooltip_data=[
-    #                 {
-    #                     column: {'value': str(value), 'type': 'markdown'} for column, value in row.items()
-    #                 } for row in df.to_dict('records')
-    #             ],
-    #             tooltip_duration=None
-    #         )
+# @app.callback(
+#     Output('debugging', 'children'),
+#     Input({'type': 'update-lci', 'index': ALL}, 'n_clicks'),
+#     # Input('update-lci', 'n_clicks'),
+#     State({'type': 'lci_datatable', 'index': ALL}, 'data'),
+#     )
+# def show_debugging(clicks, data):
+#     print('test')
+#     print(clicks, data)
+#     if len(data)==0:
+#         return ''
+#     # return pd.DataFrame(data[0])
+#     df = pd.DataFrame(data[0])
+#     print(df)
+#     return df.iloc[0, 0]
+#     # return DataTable(
+#     #             # id = {'type': 'lci_datatable', 'index': 0},
+#     #             data = df.to_dict('records'),
+#     #             # columns=[{'id': c, 'name': c} for c in df.columns],
+#     #             columns=cols,
+#     #             fixed_rows={'headers': True},
+#     #             style_cell={
+#     #                 'minWidth': 95,
+#     #                 'maxWidth': 95,
+#     #                 'width': 95,
+#     #                 'whiteSpace': 'normal',
+#     #                 'height': 'auto',
+#     #                 'lineHeight': '15px',
+#     #             },
+#     #             style_header={
+#     #                 'backgroundColor': 'rgb(210, 210, 210)',
+#     #                 'fontWeight': 'bold',
+#     #             },
+#     #             style_data_conditional=[
+#     #                 {
+#     #                     'if': {'row_index': 'odd'},
+#     #                     'backgroundColor': 'rgb(220, 220, 220)'
+#     #                 }
+#     #             ],
+#     #             style_table={
+#     #                 'height': 400,
+#     #                 'overflowX': 'auto',
+#     #             },
+#     #             tooltip_data=[
+#     #                 {
+#     #                     column: {'value': str(value), 'type': 'markdown'} for column, value in row.items()
+#     #                 } for row in df.to_dict('records')
+#     #             ],
+#     #             tooltip_duration=None
+#     #         )
 
 
 if __name__ == "__main__":

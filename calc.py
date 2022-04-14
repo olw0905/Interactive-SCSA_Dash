@@ -26,7 +26,11 @@ def read_data(lci_file):
     return lci_mapping
 
 
-def calc(sheet_names, step_mapping):
+# def calc(sheet_names, step_mapping):
+def calc(lci_mapping):
+
+    sheet_names = list(lci_mapping.keys())
+    step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
 
     lcis = process(step_mapping)
 
