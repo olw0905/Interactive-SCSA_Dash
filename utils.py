@@ -217,8 +217,8 @@ def step_processing(step_map, step_name):
 
     dff = step_map[step_name].copy()
     # dff = pd.merge(dff, properties, left_on="Input", right_index=True, how="left")
-    outputs_previous = dff[dff["Category"] == "Output from another step"].copy()
-    dff = dff[dff["Category"] != "Output from another step"]
+    outputs_previous = dff[dff["Type"] == "Input from Another Process"].copy()
+    dff = dff[dff["Type"] != "Input from Another Process"]
     to_concat = [dff]
 
     for ind, row in outputs_previous.iterrows():
@@ -245,14 +245,14 @@ def step_processing(step_map, step_name):
 
 
 def used_other_process(df):
-    return (df["Category"].str.contains("Output from another step")).any()
+    return (df["Type"].str.contains("Input from Another Process")).any()
 
 
 def process(step_mapping, looped=False):
     for key, value in step_mapping.items():
         if used_other_process(value):
-            out = value[value["Category"] == "Output from another step"]
-            other_processes = out["End Use"].values
+            out = value[value["Type"] == "Input from Another Process"]
+            other_processes = out["Previous Process"].values
             to_process = True
             for other_proc in other_processes:
                 if used_other_process(step_mapping[other_proc]):
@@ -319,6 +319,8 @@ def calculate_lca(df_lci):
     res = res.rename(columns={"Amount": "Input Amount"})
     res["Amount"] = res.apply(unit_conversion, axis=1)
     res["Unit"] = res["Primary Unit"]
+    res["Amount"] = res["Amount"] / res.loc[res['Type']=='Main Product', 'Amount'].sum()
+    res = res[res['Type']!='Main Product']
 
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
