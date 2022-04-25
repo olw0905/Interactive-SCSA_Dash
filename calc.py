@@ -67,7 +67,6 @@ def calc(lci_mapping, coprod='displacement', basis='mass'):
     if coprod = "process allocation":
         step_mapping = {sheet: allocation(df, basis) for sheet, df in step_mapping.items()}
 
-
     lcis = process(step_mapping)
 
     overall_lci = lcis[sheet_names[-1].lower()]    # Assuming the final product is always in the last worksheet TODO: Improve this.
