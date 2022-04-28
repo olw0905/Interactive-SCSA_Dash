@@ -1,7 +1,4 @@
-# TODO: Add category
 # TODO: check upper or lower cases for unit, input, etc.  Decision: keep using lower case and change the case before visualization.
-# TODO: change input to resource
-# TODO: add fuctions to add input from other processes and main output
 # TODO: use end_use_dict
 # TODO: check the functional unit
 import pandas as pd
@@ -107,6 +104,7 @@ def energy_to_mass(ene, input_unit, lhv):
 
 
 def unit_conversion(series):
+    "Perform unit operation for each LCI data entry"
     input_unit = series["Unit"]
     amount = series["Input Amount"]
     density = series["Density"]
@@ -180,23 +178,46 @@ def convert_transport_lci(df):
             btu_per_ton_mile.at["Trip from Product Origin to Destination", resource]
             * distance
             / 1000000
-        )  # MMBtu per ton
+        )  # MMBtu per dry ton
         to_origin_fuel = (
             btu_per_ton_mile.at[
                 "Trip from Product Destination Back to Origin", resource
             ]
             * distance
             / 1000000
-        )  # MMBtu per ton
+        )  # MMBtu per dry ton
+        # The row of transported resource and its amount
+        transport_entry = dff[
+            (dff["Type"].str.contains("Input")) & (dff["Resource"] == resource)
+        ].copy()
+        transport_entry["Primary Unit"] = "ton"  # The unit of paylod is always ton
+        transport_entry = transport_entry.rename(columns={"Amount": "Input Amount"})
+        transport_entry = pd.merge(
+            transport_entry,
+            properties,
+            left_on="Resource",
+            right_index=True,
+            how="left",
+        )
+        transport_entry["transport_amount_in_ton"] = transport_entry.apply(
+            unit_conversion, axis=1
+        )
+        transport_amount = transport_entry["transport_amount_in_ton"].sum()
 
         df_trans = pd.DataFrame(
             {
-                "Type": ["Input"] * 2,
-                "Process": ["Feedstock production"] * 2,
-                "Category": ["Transportation"] * 2,
+                # "Type": ["Input"] * 2,
+                # "Process": ["Feedstock production"] * 2,
+                # "Category": ["Transportation"] * 2,
+                "Type": [row.at["Type"]] * 2,
+                "Process": [row.at["Process"]] * 2,
+                "Category": [row.at["Category"]] * 2,
                 "Resource": ["diesel"] * 2,
                 "End Use": ["loaded", "empty"],
-                "Amount": [to_desti_fuel, to_origin_fuel],
+                "Amount": [
+                    to_desti_fuel * transport_amount,
+                    to_origin_fuel * transport_amount,
+                ],
                 "Unit": ["mmbtu"] * 2,
             }
         )
@@ -204,6 +225,8 @@ def convert_transport_lci(df):
         to_append.append(df_trans)
 
     return pd.concat(to_append)
+
+
 #
 #
 def step_processing(step_map, step_name):
@@ -222,18 +245,20 @@ def step_processing(step_map, step_name):
     to_concat = [dff]
 
     for ind, row in outputs_previous.iterrows():
-        step = row.at["End Use"]
+        step = row.at["Previous Process"]
         step_df = step_map[step]
         row["Input Amount"] = row["Amount"]
         row["Primary Unit"] = step_df.loc[
-            step_df["Category"] == "Main product", "Unit"
+            step_df["Type"] == "Main Product", "Unit"
         ].values[
             0
         ]  # There should only be one row of "main product" here
 
         conversion = unit_conversion(row)
 
-        step_df = step_df[step_df["Type"] != "Output"].copy()
+        step_df = step_df[
+            step_df["Type"].isin(["Input", "Co-product", "Secondary Co-product"])
+        ].copy()
         step_df["Amount"] = step_df["Amount"] * conversion
 
         to_concat.append(step_df)
@@ -245,10 +270,16 @@ def step_processing(step_map, step_name):
 
 
 def used_other_process(df):
+    """
+    Return whether a process used inputs from another process
+    """
     return (df["Type"].str.contains("Input from Another Process")).any()
 
 
 def process(step_mapping, looped=False):
+    """
+    Process the LCI data by converting inputs from another process to its corresponding LCI data.
+    """
     for key, value in step_mapping.items():
         if used_other_process(value):
             out = value[value["Type"] == "Input from Another Process"]
@@ -268,23 +299,48 @@ def process(step_mapping, looped=False):
     return step_mapping
 
 
-def format_input(df):
+def format_input(dff):
     """
     Formatting LCI data:
         1. Convert relevant column to lower cases
-        2. Convert transportation distance to fuel consumption
-        3. Merge with the properties dataframe (add the LHV and density columns)
+        2. Convert wet weight to dry weight
+        3. Convert transportation distance to fuel consumption
+        4. Normalize the LCI data: calculate the amount per unit main output
+        5. Merge with the properties dataframe (add the LHV and density columns)
 
     Parameters:
-        df: Pandas DataFrame containing LCI data
+        dff: Pandas DataFrame containing LCI data
     """
+
+    df = dff.copy()  # Avoid chaning the original df
+
+    # Step 1
     lower_case_cols = ["Resource", "End Use", "Unit"]
 
     for col in lower_case_cols:
         df[col] = df[col].str.strip().str.lower()
 
+    # Step 2
+    df["Moisture"] = df["Moisture"].fillna(0)
+    df.loc[df["Category"] != "Transportation", "Amount"] = df.loc[
+        df["Category"] != "Transportation", "Amount"
+    ] * (1 - df["Moisture"])
+    df.loc[df["Category"] == "Transportation", "Amount"] = df.loc[
+        df["Category"] == "Transportation", "Amount"
+    ] / (1 - df["Moisture"])
+
+    # df.loc[df['Category']!='Transportation', 'Amount'] = df.loc[df['Category']!='Transportation', 'Amount'] / df.loc[df['Type']=='Main Product', 'Amount'].sum()
+
+    # Step 3
     df = convert_transport_lci(df)
 
+    # Step 4
+    main_product_amount = df.loc[
+        df["Type"] == "Main Product", "Amount"
+    ].sum()  # TODO: need to make sure the units are consistent
+    df["Amount"] = df["Amount"] / main_product_amount
+
+    # Step 5
     df = pd.merge(df, properties, left_on="Resource", right_index=True, how="left")
 
     return df
@@ -319,12 +375,16 @@ def calculate_lca(df_lci):
     res = res.rename(columns={"Amount": "Input Amount"})
     res["Amount"] = res.apply(unit_conversion, axis=1)
     res["Unit"] = res["Primary Unit"]
-    res["Amount"] = res["Amount"] / res.loc[res['Type']=='Main Product', 'Amount'].sum()
-    res = res[res['Type']!='Main Product']
+    res["Amount"] = (
+        res["Amount"] / res.loc[res["Type"] == "Main Product", "Amount"].sum()
+    )
+    res = res[res["Type"] != "Main Product"]
 
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
-        res[metric + "_Sum"] = res[metric + "_Sum"] / 1055.055853    # Convert the functional unit from mmBtu to MJ
+        res[metric + "_Sum"] = (
+            res[metric + "_Sum"] / 1055.055853
+        )  # Convert the functional unit from mmBtu to MJ
 
     return res
 
