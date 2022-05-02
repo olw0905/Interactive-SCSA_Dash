@@ -28,14 +28,109 @@ def read_data(lci_file):
     sheet_names = xl.sheet_names
 
     lci_mapping = dict()
+    coproduct_mapping = dict()
+    final_process_mapping = dict()
     for sheet in sheet_names:
         if sheet not in exclude_list:
-            df = pd.read_excel(lci_file, sheet_name=sheet)
+            coproduct = pd.read_excel(
+                lci_file, sheet_name=sheet, nrows=1, usecols=[2], header=None
+            ).squeeze()
+            final_process = pd.read_excel(
+                lci_file,
+                sheet_name=sheet,
+                nrows=1,
+                usecols=[2],
+                skiprows=1,
+                header=None,
+            ).squeeze()
+            df = pd.read_excel(lci_file, sheet_name=sheet, skiprows=3)
             df["Process"] = sheet
             # df = format_input(df)
             lci_mapping.update({sheet: df})
+            coproduct_mapping.update({sheet: coproduct})
+            final_process_mapping.update({sheet: final_process})
 
-    return lci_mapping
+    return lci_mapping, coproduct_mapping, final_process_mapping
+
+
+def data_check(lci_mapping, coproduct_mapping, final_process_mapping):
+    """
+    Check for mistakes in the input LCI file.
+
+    Parameters:
+        lci_mapping: a dicttionary of the original LCI fileself.
+    Return:
+        A string indicating the status of data check.
+    """
+
+    for sheet, df in lci_mapping.items():
+        main_product = df.loc[df["Type"] == "Main Product", "Category"].unique()
+        l = len(main_product)
+
+        # The main product of each process must be specified
+        if l < 1:
+            return f'Please specify the main product of process "{sheet}".'
+
+        # Only one type of main product is allowed
+        if l > 1:
+            return (
+                f'Main products of different categories cannot be combined. Process "{sheet}" contains {l} categories of main products: '
+                + ", ".join(["{}"] * l).format(*main_product)
+                + "."
+            )
+
+        # Moisture content must be between 0 and 1
+        if ~df["Moisture"].fillna(0).between(0, 1).all():
+            return f'Moisture content must be between 0 and 1. Please correct moisture specifications for Process "{sheet}".'
+
+        # If a resource is from another process, the previous process column must be specified and the specified process must exist
+        other_process = df.loc[df["Type"] == "Input from Another Process"]
+        source_process_specified = other_process["Previous Process"].isin(
+            lci_mapping.keys()
+        )
+        if ~(source_process_specified.all()):
+            resource = other_process.loc[~source_process_specified, "Resource"].values[
+                0
+            ]
+            return f'The process from which "{resource}" in Process "{sheet}" is produced either is not specified or does not exist.'
+
+        # Electricity mix must be specified
+        electricity = df.loc[df["Resource"] == "Electricity"]
+        if electricity["End Use"].isna().any():
+            return f'Please check Process "{sheet}": Electricity mix must be specified in the "End Use" column.'
+
+    # One and only one final process can be specified
+    final_process_list = list(final_process_mapping.values())
+    final_process_number = final_process_list.count("Yes")
+    if final_process_number < 1:
+        return "The process producing the end product must be specified."
+    elif final_process_number > 1:
+        return "More than one processes produce the end product. Only one is allowed."
+
+    # Process-level and system-level allocation method cannot be selected at the same time
+    process_allocation_used = False
+    system_allocation_used = False
+    process_sheet = ""
+    system_sheet = ""
+
+    for sheet, allocation_method in coproduct_mapping.items():
+        if "Process" in allocation_method:
+            process_allocation_used = True
+            process_sheet = sheet
+            break
+
+    for sheet, allocation_method in coproduct_mapping.items():
+        if "System" in allocation_method:
+            system_allocation_used = True
+            system_sheet = sheet
+            break
+
+    if process_allocation_used and system_allocation_used:
+        return f'System-level allocation (Process "{system_sheet}") and process-level allocation (Process "{process_sheet}") should not be used at the same time.'
+
+    # Check passed!
+    else:
+        return "OK"
 
 
 def allocation(df, basis="mass"):
@@ -63,7 +158,11 @@ def allocation(df, basis="mass"):
         / products["Amount"].sum()
     )
 
-    allocated = df[~df["Type"].isin(["Main Product", "Co-product"])].copy()
+    not_allocated = (df["Type"] == "Main Product") & (
+        (df["Type"] == "Co-product")
+        | (df["Always Use Displacement Method for Co-Product?"] == "Yes")
+    )
+    allocated = df[~not_allocated].copy()
 
     # allocated['Ratio'] = allocated
     allocated["Amount"] = allocated["Amount"] * allocated["Product train"].map(
@@ -92,7 +191,7 @@ def calc(lci_mapping, coprod="displacement", basis="mass"):
         step_mapping = {
             sheet: allocation(df, basis) for sheet, df in step_mapping.items()
         }
-    
+
     lcis = process(step_mapping)
 
     overall_lci = lcis[
@@ -116,7 +215,6 @@ def calc(lci_mapping, coprod="displacement", basis="mass"):
         overall_lci.loc[overall_lci["Type"].str.contains("Co-product"), "Amount"] * -1
     )
 
-    return lci_mapping, step_mapping, lcis
     res = calculate_lca(overall_lci)
     # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
     res["Resource"] = res["Resource"].str.title()

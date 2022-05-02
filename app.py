@@ -393,7 +393,7 @@ def update_results(
             lci_new = parse_contents(contents, filename, date)
             # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
-            lci_mapping = read_data(lci_new)
+            lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_new)
             dropdown_value = None
 
             # sheet_names = list(lci_mapping.keys())

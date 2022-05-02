@@ -257,7 +257,7 @@ def step_processing(step_map, step_name):
         conversion = unit_conversion(row)
 
         step_df = step_df[
-            step_df["Type"].isin(["Input", "Co-product", "Secondary Co-product"])
+            step_df["Type"].isin(["Input", "Co-product"])
         ].copy()
         step_df["Amount"] = step_df["Amount"] * conversion
 
