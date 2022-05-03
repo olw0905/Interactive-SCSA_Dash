@@ -408,7 +408,7 @@ def update_results(
         
         lci_data = {key: value.to_json(orient='split', date_format='iso') for key, value in lci_mapping.items()}
         # res_new = calc(sheet_names, step_mapping)
-        res_new = calc(lci_mapping)
+        res_new = calc(lci_mapping, final_process_mapping)
         dropdown_items = [
             dbc.Row([
                 dbc.Col(html.H5(['Edit Life Cycle Inventory Data'])),

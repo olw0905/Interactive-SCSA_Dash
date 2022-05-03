@@ -33,6 +33,13 @@ metrics = [
     "GHG",
 ]
 
+combination_basis = {  # The basis for combinaning multiple "main products"
+    "Biomass": "kg",
+    "Fuel": "mmbtu",
+    "Electricity": "mmbtu",
+    "Chemicals and catalysts": "kg",
+}
+
 units = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Units", header=0, index_col=0
 ).squeeze("columns")
@@ -256,9 +263,7 @@ def step_processing(step_map, step_name):
 
         conversion = unit_conversion(row)
 
-        step_df = step_df[
-            step_df["Type"].isin(["Input", "Co-product"])
-        ].copy()
+        step_df = step_df[step_df["Type"].isin(["Input", "Co-product"])].copy()
         step_df["Amount"] = step_df["Amount"] * conversion
 
         to_concat.append(step_df)
@@ -305,8 +310,9 @@ def format_input(dff):
         1. Convert relevant column to lower cases
         2. Convert wet weight to dry weight
         3. Convert transportation distance to fuel consumption
-        4. Normalize the LCI data: calculate the amount per unit main output
-        5. Merge with the properties dataframe (add the LHV and density columns)
+        4. Merge with the properties dataframe (add the LHV and density columns)
+        5. Combining multiple entries of "main products"
+        6. Normalize the LCI data: calculate the amount per unit main output
 
     Parameters:
         dff: Pandas DataFrame containing LCI data
@@ -335,13 +341,29 @@ def format_input(dff):
     df = convert_transport_lci(df)
 
     # Step 4
+    df = pd.merge(df, properties, left_on="Resource", right_index=True, how="left")
+
+    # Step 5
+    main_products = df[df["Type"] == "Main Product"].copy()
+    if len(main_products) > 1:
+        main_products["Primary Unit"] = combination_basis[
+            main_products["Category"].values[0]
+        ]
+        main_products = main_products.rename(columns={"Amount": "Input Amount"})
+        main_products["Amount"] = main_products.apply(unit_conversion, axis=1)
+        main_products["Amount"] = main_products["Amount"].sum()
+        main_products["Unit"] = main_products["Primary Unit"]
+        main_products = main_products.drop(["Input Amount", "Primary Unit"], axis=1)
+        df = pd.concat(
+            [df[df["Type"] != "Main Product"], main_products.iloc[:1]],
+            ignore_index=True,
+        )
+
+    # Step 6
     main_product_amount = df.loc[
         df["Type"] == "Main Product", "Amount"
     ].sum()  # TODO: need to make sure the units are consistent
     df["Amount"] = df["Amount"] / main_product_amount
-
-    # Step 5
-    df = pd.merge(df, properties, left_on="Resource", right_index=True, how="left")
 
     return df
 

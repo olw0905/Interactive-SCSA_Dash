@@ -158,9 +158,9 @@ def allocation(df, basis="mass"):
         / products["Amount"].sum()
     )
 
-    not_allocated = (df["Type"] == "Main Product") & (
+    not_allocated = (df["Type"] == "Main Product") | (
         (df["Type"] == "Co-product")
-        | (df["Always Use Displacement Method for Co-Product?"] == "Yes")
+        & (df["Always Use Displacement Method for Co-Product?"] == "No")
     )
     allocated = df[~not_allocated].copy()
 
@@ -177,7 +177,7 @@ def allocation(df, basis="mass"):
 
 
 # def calc(sheet_names, step_mapping):
-def calc(lci_mapping, coprod="displacement", basis="mass"):
+def calc(lci_mapping, final_process_mapping, coprod="displacement", basis="mass"):
     """
     lci_mapping: a dictionary containing the sheet names and original LCI data table.
     coprod: coproduct handling method. Must be one of the following: "displacement", "process allocation", and "system allocation".
@@ -194,9 +194,13 @@ def calc(lci_mapping, coprod="displacement", basis="mass"):
 
     lcis = process(step_mapping)
 
-    overall_lci = lcis[
-        sheet_names[-1]
-    ]  # Assuming the final product is always in the last worksheet TODO: Improve this.
+    # Locate the last process
+    for sheet, process_bool in final_process_mapping.items():
+        if process_bool = "Yes":
+            final_process = sheet
+            break
+            
+    overall_lci = lcis[final_process]  
     # overall_lci = overall_lci[overall_lci['Type']=='Input'].copy()
     # overall_lci['ID'] = overall_lci.apply(
     #     # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
@@ -211,8 +215,8 @@ def calc(lci_mapping, coprod="displacement", basis="mass"):
         else a["Resource"] + "_" + a["End Use"],
         axis=1,
     )
-    overall_lci.loc[overall_lci["Type"].str.contains("Co-product"), "Amount"] = (
-        overall_lci.loc[overall_lci["Type"].str.contains("Co-product"), "Amount"] * -1
+    overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] = (
+        overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] * -1
     )
 
     res = calculate_lca(overall_lci)
