@@ -1,3 +1,4 @@
+from asyncio import as_completed
 import pandas as pd
 
 # from lookup_table import lookup_table
@@ -15,6 +16,8 @@ def read_data(lci_file):
 
     Return:
         lci_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
+        coproduct_mapping: a dictionary of co-product handling method.
+        final_process_mapping: a dictionary indicating whether each process produces the end product.
     """
     exclude_list = [
         "Introduction",
@@ -153,6 +156,9 @@ def allocation(df, basis="mass"):
         pass
 
     products["Amount"] = products.apply(unit_conversion, axis=1)
+    products = products[
+        products["Amount"] > 0
+    ]  # Elimante the co-products to which displacement method has been applied
     ratio = (
         products.loc[products["Type"] == "Main Product", "Amount"].sum()
         / products["Amount"].sum()
@@ -161,51 +167,119 @@ def allocation(df, basis="mass"):
     not_allocated = (df["Type"] == "Main Product") | (
         (df["Type"] == "Co-product")
         & (df["Always Use Displacement Method for Co-Product?"] == "No")
+        & (
+            df["Amount"] > 0
+        )  # if amount is less than zero, it means displacement method has been applied (for example, if displacement method is used for a process)
     )
     allocated = df[~not_allocated].copy()
 
     # allocated['Ratio'] = allocated
-    allocated["Amount"] = allocated["Amount"] * allocated["Product train"].map(
+    allocated["Amount"] = allocated["Amount"] * allocated["Product Train"].map(
         {"Both": ratio, "Co-product": 0, "Main product": 1}
     ).fillna(ratio)
 
-    allocated = allocated[allocated["Amount"] > 0]
+    allocated = allocated[allocated["Amount"] != 0]
+    allocated.loc[
+        (allocated["Type"] == "Co-product") & (allocated["Amount"] > 0), "Amount"
+    ] = -allocated.loc[
+        (allocated["Type"] == "Co-product") & (allocated["Amount"] > 0), "Amount"
+    ]  # Only for the co-products for which displacement methods should but have not been applied
 
     return pd.concat(
         [allocated, df[df["Type"].isin(["Main Product"])]], ignore_index=True
     )
 
 
-# def calc(sheet_names, step_mapping):
-def calc(lci_mapping, final_process_mapping, coprod="displacement", basis="mass"):
+def generate_final_lci(lci_mapping, coproduct_mapping, final_process_mapping):
     """
+    Generatethe final LCI file used for LCA calculation
+
+    Parameters:
+        lci_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
+        coproduct_mapping: a dictionary of co-product handling method. The values can be one of the following:
+            Displacement Method, Process Level Mass-Based Allocation, Process Level Energy-Based Allocation, Process Level Value-Based Allocation,
+            System Level Mass-Based Allocation, system Level-Based Energy Allocation, System Level Value-Based Allocation.
+    Return:
+        lci_mapping_processed: the LCI data after applying the co-product handling method
+    """
+    system_allocation = (
+        False  # A flag indicating whether system-level allocation is used
+    )
+    system_allocation_basis = "mass"  # The basis used for system-level allocation
+
+    step_mapping = {}
+    for sheet in lci_mapping:
+        df = format_input(lci_mapping[sheet])
+        if "Process" in coproduct_mapping[sheet]:
+            if "Mass" in coproduct_mapping[sheet]:
+                step_mapping.update({sheet: allocation(df, "mass")})
+            elif "Energy" in coproduct_mapping[sheet]:
+                step_mapping.update({sheet: allocation(df, "energy")})
+            else:
+                step_mapping.update({sheet: allocation(df, "value")})
+        elif "Displacement" in coproduct_mapping[sheet]:
+            df.loc[df["Type"] == "Co-product", "Amount"] = -df.loc[
+                df["Type"] == "Co-product", "Amount"
+            ]
+            step_mapping.update({sheet: df})
+        else:  # System-level allocation, no processing needed at this stage
+            step_mapping.update({sheet: df})
+            system_allocation = True
+            if "Energy" in coproduct_mapping[sheet]:
+                system_allocation_basis = "energy"
+            elif "Value" in coproduct_mapping[sheet]:
+                system_allocation_basis = "value"
+    # return step_mapping
+    lcis = process(step_mapping)
+
+    # Locate the last process
+    for sheet, process_bool in final_process_mapping.items():
+        if process_bool == "Yes":
+            final_process = sheet
+            break
+
+    overall_lci = lcis[final_process]
+    # return overall_lci, lcis, system_allocation, system_allocation_basis
+    if system_allocation:
+        overall_lci["Product Train"] = "Both"
+        overall_lci = allocation(overall_lci, system_allocation_basis)
+
+    return overall_lci
+
+
+# def calc(sheet_names, step_mapping):
+# def calc(lci_mapping, final_process_mapping, coprod="displacement", basis="mass"):
+def calc(overall_lci):
+    """
+    Calculate LCA results
     lci_mapping: a dictionary containing the sheet names and original LCI data table.
     coprod: coproduct handling method. Must be one of the following: "displacement", "process allocation", and "system allocation".
     basis: the basis for allocation methods. Must be one of the following: "mass", "energy", or "value".
     """
 
-    sheet_names = list(lci_mapping.keys())
-    step_mapping = {sheet: format_input(df) for sheet, df in lci_mapping.items()}
+    # sheet_names = list(lci_mapping.keys())
+    # step_mapping = {sheet: format_input(df) for sheet, df in lci_mapping.items()}
 
-    if coprod == "process allocation":
-        step_mapping = {
-            sheet: allocation(df, basis) for sheet, df in step_mapping.items()
-        }
+    # if coprod == "process allocation":
+    #     step_mapping = {
+    #         sheet: allocation(df, basis) for sheet, df in step_mapping.items()
+    #     }
 
-    lcis = process(step_mapping)
+    # lcis = process(step_mapping)
 
-    # Locate the last process
-    for sheet, process_bool in final_process_mapping.items():
-        if process_bool = "Yes":
-            final_process = sheet
-            break
-            
-    overall_lci = lcis[final_process]  
-    # overall_lci = overall_lci[overall_lci['Type']=='Input'].copy()
-    # overall_lci['ID'] = overall_lci.apply(
-    #     # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
-    #     lambda a: a['Resource'] if pd.isna(a['End Use']) else a['Resource']+'_'+a['End Use'], axis=1
-    # )
+    # # Locate the last process
+    # for sheet, process_bool in final_process_mapping.items():
+    #     if process_bool = "Yes":
+    #         final_process = sheet
+    #         break
+
+    # overall_lci = lcis[final_process]
+    # # overall_lci = overall_lci[overall_lci['Type']=='Input'].copy()
+    # # overall_lci['ID'] = overall_lci.apply(
+    # #     # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
+    # #     lambda a: a['Resource'] if pd.isna(a['End Use']) else a['Resource']+'_'+a['End Use'], axis=1
+    # # )
+    # overall_lci = overall_lci.groupby(['Type', 'Resource', 'Process'], as_index=False)['Amount'].sum()
     overall_lci["End Use"] = overall_lci["End Use"].fillna("")
     overall_lci["ID"] = overall_lci.apply(
         # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
@@ -215,9 +289,9 @@ def calc(lci_mapping, final_process_mapping, coprod="displacement", basis="mass"
         else a["Resource"] + "_" + a["End Use"],
         axis=1,
     )
-    overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] = (
-        overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] * -1
-    )
+    # overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] = (
+    #     overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] * -1
+    # )
 
     res = calculate_lca(overall_lci)
     # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
