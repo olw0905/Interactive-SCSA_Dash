@@ -1,4 +1,5 @@
 from asyncio import as_completed
+from asyncore import read
 import pandas as pd
 
 # from lookup_table import lookup_table
@@ -302,3 +303,27 @@ def calc(overall_lci):
     )
 
     return res
+
+
+def calculation_in_one(lci_file):
+    """
+    Calculate the results from the uploaded LCI file.
+
+    Parameter:
+        lci_file: uploaded LCI file
+
+    Return:
+        res: the dataframe containing the final LCA results
+    """
+    lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_file)
+    data_status = data_check(lci_mapping, coproduct_mapping, final_process_mapping)
+
+    if data_status == "OK":
+        overall_lci = generate_final_lci(
+            lci_mapping, coproduct_mapping, final_process_mapping
+        )
+        res = calc(overall_lci)
+        return res
+
+    else:
+        return data_status

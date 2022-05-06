@@ -1,4 +1,5 @@
 import base64
+
 # import datetime
 import io
 import plotly.graph_objs as go
@@ -8,14 +9,16 @@ import dash
 from dash import dcc, html, MATCH, ALL
 from dash.dash_table import DataTable, FormatTemplate
 from dash.dash_table.Format import Format, Scheme, Trim
+
 # from dash import html
 from dash.dependencies import Input, Output, State
+
 # from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import pandas as pd
 import json
-from calc import read_data, calc
+from calc import read_data, calc, calculation_in_one, generate_final_lci, data_check
 from utils import format_input
 
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -40,6 +43,9 @@ server = app.server
 
 
 def calculate(df_lci):
+    """
+    Calculate initial (default) results
+    """
     df = pd.merge(df_lci, lookup, left_on="Input", right_index=True)
     metrics = ["NOx", "GHG"]
     for metric in metrics:
@@ -48,31 +54,41 @@ def calculate(df_lci):
 
 
 # Read Data
-lookup = pd.read_excel("Metric_table_sample.xlsx", index_col=0).transpose()
-lci = pd.read_excel("upload_sample_LCI.xlsx")
-res = calculate(lci)
-res["Resource"] = res["Input"]
-res["Input Amount"] = res["Usage"]
+# lookup = pd.read_excel("Metric_table_sample.xlsx", index_col=0).transpose()
+# lci = pd.read_excel("upload_sample_LCI.xlsx")
+# res = calculate(lci)
+# res["Resource"] = res["Input"]
+# res["Input Amount"] = res["Usage"]
+
+res = calculation_in_one("2021 Biochem SOT via BDO_working.xlsm")
 
 
 nav_item = dbc.Nav(
     [
         dbc.NavItem(html.Br(), className="d-none d-md-block"),
         dbc.NavItem(html.Br(), className="d-none d-md-block"),
-        dbc.NavItem(html.H2('SOT Pathways'), className="d-none d-md-block"),
+        dbc.NavItem(html.H2("SOT Pathways"), className="d-none d-md-block"),
         # dbc.NavItem(dbc.NavLink("")),
         dbc.NavItem(html.Hr(), className="d-none d-md-block"),
         dbc.NavItem(html.Br()),
         # dbc.NavItem(dbc.NavLink("Test")),
         dbc.NavItem(dbc.NavLink("Biochemical Conversion", href="/", active=True)),
         dbc.NavItem(dbc.NavLink("Catalytic Fast Pyrolysis", href="#", active="exact")),
-        dbc.NavItem(dbc.NavLink("Indirect Hydrothermal Liquefaction", href="#", active="exact")),
+        dbc.NavItem(
+            dbc.NavLink("Indirect Hydrothermal Liquefaction", href="#", active="exact")
+        ),
         dbc.NavItem(dbc.NavLink("Combined Algae Processing", href="#", active="exact")),
-        dbc.NavItem(dbc.NavLink("Algae Hydrothermal Liquefaction", href="#", active="exact")),
-        dbc.NavItem(dbc.NavLink("WWT Sludge Hydrothermal Liquefaction", href="#", active="exact")),
+        dbc.NavItem(
+            dbc.NavLink("Algae Hydrothermal Liquefaction", href="#", active="exact")
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "WWT Sludge Hydrothermal Liquefaction", href="#", active="exact"
+            )
+        ),
     ],
-    vertical='md',
-    pills=True
+    vertical="md",
+    pills=True,
 )
 
 navbar = dbc.Navbar(
@@ -80,9 +96,9 @@ navbar = dbc.Navbar(
         [
             dbc.NavbarBrand(
                 "SOT Pathways",
-                id="navbar-brand", 
-                href="#", 
-                className='d-md-none',
+                id="navbar-brand",
+                href="#",
+                className="d-md-none",
                 # style={'overflow': 'hidden'}
             ),
             dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
@@ -104,7 +120,7 @@ navbar = dbc.Navbar(
         ]
     ),
     # className="mb-5 border-bottom",
-    color='white',
+    color="white",
     # expand='lg',
     # style={'width':'100%'}
 )
@@ -113,7 +129,7 @@ navbar = dbc.Navbar(
 # content = dbc.Container(
 # children=[
 content = [
-    dcc.Store(id='results'),
+    dcc.Store(id="results"),
     html.Br(),
     html.H1(children="SOT LCA Results", className="text-dark"),
     html.H3(
@@ -139,52 +155,80 @@ content = [
         dismissable=True,
         is_open=False,
     ),
-    dbc.Row([
-    dbc.Col(dcc.Upload(
-        id="upload-data",
-        children=html.Div(
-            ["Drag and Drop or ", html.A("Select Files", className="link-primary")]
-        ),
-        style={
-            "width": "100%",
-            "height": "60px",
-            "lineHeight": "60px",
-            "borderWidth": "1px",
-            "borderStyle": "dashed",
-            "borderRadius": "5px",
-            "textAlign": "center",
-            "margin": "10px",
-        },
-        # Allow multiple files to be uploaded
-        multiple=False,
-    )),
-    dbc.Col(dbc.Button(
-                "Reset", color="primary", className="me-1", id="reset-button", n_clicks=0, style={'margin': '10px'}
-    ), width='auto', className='align-self-center')
-            ]),
+    dbc.Alert(
+        [
+            html.H5(
+                "Results cannot be updated due to the following error in the LCI file: ",
+                className="alert-heading",
+            ),
+            # html.Br(),
+            html.H6(id="error_message"),
+        ],
+        id="error_status",
+        color="danger",
+        # style={"textAlign": "center"},
+        dismissable=True,
+        is_open=False,
+    ),
+    dbc.Row(
+        [
+            dbc.Col(
+                dcc.Upload(
+                    id="upload-data",
+                    children=html.Div(
+                        [
+                            "Drag and Drop or ",
+                            html.A("Select Files", className="link-primary"),
+                        ]
+                    ),
+                    style={
+                        "width": "100%",
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin": "10px",
+                    },
+                    # Allow multiple files to be uploaded
+                    multiple=False,
+                )
+            ),
+            dbc.Col(
+                dbc.Button(
+                    "Reset",
+                    color="primary",
+                    className="me-1",
+                    id="reset-button",
+                    n_clicks=0,
+                    style={"margin": "10px"},
+                ),
+                width="auto",
+                className="align-self-center",
+            ),
+        ]
+    ),
     dbc.Row(
         dbc.Col(
             [
-                html.H5("Renewable Electricity %", className='text-center'),
-                dcc.Slider(0, 1, 
-                step=None,
-                marks = {
-                    val: '{:.0%}'.format(val) for val in np.linspace(0, 1, 11)
-                },
-                value=0,
-                id='renewable_elec'
-                )
-                ],
-                # width={"size": 6, "offset": 3}
-           )),
+                html.H5("Renewable Electricity %", className="text-center"),
+                dcc.Slider(
+                    0,
+                    1,
+                    step=None,
+                    marks={val: "{:.0%}".format(val) for val in np.linspace(0, 1, 11)},
+                    value=0,
+                    id="renewable_elec",
+                ),
+            ],
+            # width={"size": 6, "offset": 3}
+        )
+    ),
     dbc.Tabs(
         [
-            dbc.Tab(
-                label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"
-            ),
-            dbc.Tab(
-                label="NOx", tab_id="NOx", activeTabClassName="fw-bold fst-italic"
-            ),
+            dbc.Tab(label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(label="NOx", tab_id="NOx", activeTabClassName="fw-bold fst-italic"),
         ],
         id="tabs",
         active_tab="GHG",
@@ -194,32 +238,30 @@ content = [
         [
             dbc.Col(dcc.Graph(id="graph1"), md=6),
             dbc.Col(dcc.Graph(id="graph2"), md=6),
-        ], style={'width': '100%'}
+        ],
+        style={"width": "100%"},
     ),
     dbc.Row(
         [
             dbc.Col(dcc.Graph(id="graph3"), md=6),
             dbc.Col(dcc.Graph(id="graph4"), md=6),
-        ], style={'width': '100%'}
+        ],
+        style={"width": "100%"},
     ),
-    dbc.Container(id='dropdown'),
-    dbc.Row(id={'type': 'datatable', 'index': 0}, className='mb-5'),
+    dbc.Container(id="dropdown"),
+    dbc.Row(id={"type": "datatable", "index": 0}, className="mb-5"),
 ]
 
 app.layout = dbc.Container(
-    [
-        dbc.Row(
-            [
-                dbc.Col(navbar, md=3),
-                dbc.Col(content, md=9, className='mt-10')
-            ]
-        )        
-    ],
+    [dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")])],
     # fluid=True
 )
 
 
 def parse_contents(contents, filename, date):
+    """
+    Parse the uploaded LCI file
+    """
     content_type, content_string = contents.split(",")
 
     decoded = base64.b64decode(content_string)
@@ -240,102 +282,120 @@ def parse_contents(contents, filename, date):
     return lci_file
 
 
-def make_waterfall_plot(res, metric='GHG', n=4):
+def make_waterfall_plot(res, metric="GHG", n=4):
+    """
+    Generate the waterfall plot
+    """
 
     df = res.copy()
-    col = metric + '_Sum'
+    col = metric + "_Sum"
 
-    df.loc[df[col]<0, 'Resource'] = df.loc[df[col]<0, 'Resource'].apply(lambda x: 'Disp. Credit of ' + x)
-    dfp = df[df[col]>0].groupby('Resource', as_index=False)[col].sum()
-    dfn = df[df[col]<0].groupby('Resource', as_index=False)[col].sum()
+    df.loc[df[col] < 0, "Resource"] = df.loc[df[col] < 0, "Resource"].apply(
+        lambda x: "Disp. Credit of " + x
+    )
+    dfp = df[df[col] > 0].groupby("Resource", as_index=False)[col].sum()
+    dfn = df[df[col] < 0].groupby("Resource", as_index=False)[col].sum()
     df1 = dfp.nlargest(n, col)
     df2 = dfn.nsmallest(n, col)
     other = df[col].sum() - df1[col].sum() - df2[col].sum()
-    
-    for_plot = pd.concat([
-        df1[['Resource', col]],
-        pd.Series({'Resource': 'Other', col: other}).to_frame().T,
-        df2[['Resource', col]],
-    ])
-    
-    fig = go.Figure(go.Waterfall(
-        # name = "20", 
-        orientation = "v",
-        measure = ["relative"] * len(for_plot) + ['total'],
-        x = for_plot['Resource'].to_list() + ['Total'],
-        y = for_plot[col].to_list() + [0],
-        textposition = "outside",
-        text = ["{:,.0f}".format(val) for val in for_plot[col].to_list() + [df[col].sum()]],
-        connector = {"line":{"color":"rgb(63, 63, 63)"}},
-    ))
+
+    for_plot = pd.concat(
+        [
+            df1[["Resource", col]],
+            pd.Series({"Resource": "Other", col: other}).to_frame().T,
+            df2[["Resource", col]],
+        ]
+    )
+
+    fig = go.Figure(
+        go.Waterfall(
+            # name = "20",
+            orientation="v",
+            measure=["relative"] * len(for_plot) + ["total"],
+            x=for_plot["Resource"].to_list() + ["Total"],
+            y=for_plot[col].to_list() + [0],
+            textposition="outside",
+            text=[
+                "{:,.0f}".format(val)
+                for val in for_plot[col].to_list() + [df[col].sum()]
+            ],
+            connector={"line": {"color": "rgb(63, 63, 63)"}},
+        )
+    )
 
     fig.update_layout(
-            # title = col,
-            showlegend = False
+        # title = col,
+        showlegend=False
     )
 
     return fig
 
+
 @app.callback(
-    Output({'type': 'datatable', 'index': MATCH}, 'children'),
-    Input({'type': 'process_dropdown', 'index': MATCH}, "value"),
-    State('results', "data"),
+    Output({"type": "datatable", "index": MATCH}, "children"),
+    Input({"type": "process_dropdown", "index": MATCH}, "value"),
+    State("results", "data"),
     State("reset_status", "is_open"),
 )
 def show_datatable(process_to_edit, stored_data, rs):
+    """
+    Generate the data table
+    """
     if (process_to_edit is None) or (rs):
         return []
     else:
         data = json.loads(stored_data)
-        lci_data = data['lci']
-        lci_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
-        df = lci_mapping[process_to_edit]  
-        cols = [{'id': c, 'name': c, 'editable': (c=='Amount')} for c in df.columns]
+        lci_data = data["lci"]
+        lci_mapping = {
+            key: pd.read_json(value, orient="split") for key, value in lci_data.items()
+        }
+        df = lci_mapping[process_to_edit]
+        cols = [{"id": c, "name": c, "editable": (c == "Amount")} for c in df.columns]
         for col in cols:
-            if col['name'] == 'Amount':
-                col['type'] = 'numeric'
-                col['format'] = Format(precision=2, scheme=Scheme.decimal_or_exponent)
+            if col["name"] == "Amount":
+                col["type"] = "numeric"
+                col["format"] = Format(precision=2, scheme=Scheme.decimal_or_exponent)
         return [
             DataTable(
-                id = {'type': 'lci_datatable', 'index': 0},
-                data = df.to_dict('records'),
+                id={"type": "lci_datatable", "index": 0},
+                data=df.to_dict("records"),
                 # columns=[{'id': c, 'name': c} for c in df.columns],
                 columns=cols,
-                fixed_rows={'headers': True},
+                fixed_rows={"headers": True},
                 style_cell={
-                    'minWidth': 95,
-                    'maxWidth': 95,
-                    'width': 95,
-                    'whiteSpace': 'normal',
-                    'height': 'auto',
-                    'lineHeight': '15px',
+                    "minWidth": 95,
+                    "maxWidth": 95,
+                    "width": 95,
+                    "whiteSpace": "normal",
+                    "height": "auto",
+                    "lineHeight": "15px",
                 },
                 style_header={
-                    'backgroundColor': 'rgb(210, 210, 210)',
-                    'fontWeight': 'bold',
+                    "backgroundColor": "rgb(210, 210, 210)",
+                    "fontWeight": "bold",
                 },
                 style_data_conditional=[
                     {
-                        'if': {'row_index': 'odd'},
-                        'backgroundColor': 'rgb(220, 220, 220)'
+                        "if": {"row_index": "odd"},
+                        "backgroundColor": "rgb(220, 220, 220)",
                     },
-                    {
-                        'if': {'column_editable': True},
-                        'color': 'blue'
-                    }
+                    {"if": {"column_editable": True}, "color": "blue"},
                 ],
                 style_table={
-                    'height': 400,
-                    'overflowX': 'auto',
+                    "height": 400,
+                    "overflowX": "auto",
                 },
                 tooltip_data=[
                     {
-                        column: {'value': str(value), 'type': 'markdown'} for column, value in row.items()
-                    } for row in df.to_dict('records')
+                        column: {"value": str(value), "type": "markdown"}
+                        for column, value in row.items()
+                    }
+                    for row in df.to_dict("records")
                 ],
-                tooltip_duration=None
+                tooltip_duration=None,
             )
-    ]
+        ]
+
 
 # add callback for toggling the collapse on small screens
 @app.callback(
@@ -346,39 +406,49 @@ def show_datatable(process_to_edit, stored_data, rs):
     State("navbar-collapse", "is_open"),
 )
 def toggle_navbar_collapse(n, is_open):
+    """
+    Toggle the navbar
+    """
     if n:
         return not is_open
     return is_open
 
+
 @app.callback(
-    Output('results', "data"),
+    Output("results", "data"),
     Output("dropdown", "children"),
     Output("upload-data", "contents"),
-    Output('renewable_elec', 'value'),
+    Output("renewable_elec", "value"),
     Input("upload-data", "contents"),
     Input("reset-button", "n_clicks"),
     # Input("update-lci", "n_clicks"),
-    Input({'type': 'update-lci', 'index': ALL}, 'n_clicks'),
+    Input({"type": "update-lci", "index": ALL}, "n_clicks"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
-    State('results', "data"),
-    State({'type': 'lci_datatable', 'index': ALL}, 'data'),
-    State({'type': 'process_dropdown', 'index': ALL}, "value"),
+    State("results", "data"),
+    State({"type": "lci_datatable", "index": ALL}, "data"),
+    State({"type": "process_dropdown", "index": ALL}, "value"),
 )
 def update_results(
-        contents, 
-        n_clicks1, 
-        n_clicks2,
-        filename, 
-        date, 
-        stored_data,
-        data_table,
-        process_to_edit
-    ):
+    contents,
+    n_clicks1,
+    n_clicks2,
+    filename,
+    date,
+    stored_data,
+    data_table,
+    process_to_edit,
+):
+    """
+    Update the LCA results
+    """
     reset_status = False
     update_status = False
+    error_status = False
     dropdown_items = []
     lci_data = {}
+    data_status = "OK"
+    error_message = ""
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -386,42 +456,84 @@ def update_results(
     if changed_id == "reset-button":
         res_new = res.copy()
         reset_status = True
+        # data_status = "OK"
         # return res.to_json(date_format='iso', orient='split'), reset_status, update_status
 
-    elif contents or 'update-lci' in changed_id:
+    elif contents or ("update-lci" in changed_id):
         if contents:
             lci_new = parse_contents(contents, filename, date)
             # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
             lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_new)
+
             dropdown_value = None
 
             # sheet_names = list(lci_mapping.keys())
             # step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
         else:
             data = json.loads(stored_data)
-            lci_data = data['lci']
-            lci_mapping = {key: pd.read_json(value, orient='split') for key, value in lci_data.items()}
+            lci_data = data["lci"]
+            lci_mapping = {
+                key: pd.read_json(value, orient="split")
+                for key, value in lci_data.items()
+            }
             # sheet_names = list(lci_mapping.keys())
             lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
             dropdown_value = process_to_edit[0]
-        
-        lci_data = {key: value.to_json(orient='split', date_format='iso') for key, value in lci_mapping.items()}
-        # res_new = calc(sheet_names, step_mapping)
-        res_new = calc(lci_mapping, final_process_mapping)
-        dropdown_items = [
-            dbc.Row([
-                dbc.Col(html.H5(['Edit Life Cycle Inventory Data'])),
-                # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
-        ]),
-            # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
-            dbc.Row([
-                        dbc.Col(dcc.Dropdown(list(lci_mapping.keys()), id={'type': 'process_dropdown', 'index': 0}, value=dropdown_value)),
-                        dbc.Col(dbc.Button("Update", color="success", className="mb-3", id={'type': 'update-lci', 'index': 0}), width='auto')
-                    ])
-        ]
-        update_status = True
 
+        lci_data = {
+            key: value.to_json(orient="split", date_format="iso")
+            for key, value in lci_mapping.items()
+        }
+        # res_new = calc(sheet_names, step_mapping)
+        # res_new = calc(lci_mapping, final_process_mapping)
+        data_status = data_check(lci_mapping, coproduct_mapping, final_process_mapping)
+        if data_status == "OK":
+            overall_lci = generate_final_lci(
+                lci_mapping, coproduct_mapping, final_process_mapping
+            )
+            res_new = calc(overall_lci)
+
+            dropdown_items = [
+                dbc.Row(
+                    [
+                        dbc.Col(html.H5(["Edit Life Cycle Inventory Data"])),
+                        # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
+                    ]
+                ),
+                # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dcc.Dropdown(
+                                list(lci_mapping.keys()),
+                                id={"type": "process_dropdown", "index": 0},
+                                value=dropdown_value,
+                            )
+                        ),
+                        dbc.Col(
+                            dbc.Button(
+                                "Update",
+                                color="success",
+                                className="mb-3",
+                                id={"type": "update-lci", "index": 0},
+                            ),
+                            width="auto",
+                        ),
+                    ]
+                ),
+            ]
+            update_status = True
+        else:
+            data = json.loads(stored_data)
+            res_new = pd.read_json(data["pd"], orient="split")
+            error_status = True
+            # error_message = [
+            #     "Please fix the following error in the LCI file: ",
+            #     html.Br(),
+            #     data_status,
+            # ]
+            error_message = data_status
     # elif 'update-lci' in changed_id:
     #     # step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
     #     # res_new = calc(sheet_names, step_mapping)
@@ -429,14 +541,18 @@ def update_results(
     #     update_status = True
 
     else:
-        res_new = res.copy()
+        res_new = res.copy()  # Initialization of the app
 
     # return res_new.to_json(date_format='iso', orient='split'), reset_status, update_status, None
+
     data_to_return = {
+        # "status": data_status,
         "pd": res_new.to_json(date_format="iso", orient="split"),
         "lci": lci_data,
         "r_status": reset_status,
         "p_status": update_status,
+        "e_status": error_status,
+        "e_message": data_status,
     }
 
     return json.dumps(data_to_return), dropdown_items, None, 0
@@ -449,36 +565,64 @@ def update_results(
     Output("graph4", "figure"),
     Output("reset_status", "is_open"),
     Output("update_status", "is_open"),
-    Input('results', "data"),
+    Output("error_status", "is_open"),
+    Output("error_message", "children"),
+    Input("results", "data"),
     Input("tabs", "active_tab"),
-    Input('renewable_elec', 'value'),
+    Input("renewable_elec", "value"),
     State("reset_status", "is_open"),
     State("update_status", "is_open"),
+    State("error_status", "is_open"),
+    State("error_message", "children"),
+    State("graph1", "figure"),
+    State("graph2", "figure"),
+    State("graph3", "figure"),
+    State("graph4", "figure"),
 )
-def update_figures(json_data, tab, re, rs, us):
-
+def update_figures(json_data, tab, re, rs, us, es, em, f1, f2, f3, f4):
+    """
+    Update the visualizations
+    """
     data = json.loads(json_data)
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     # print(ctx.triggered)
-    if changed_id == 'results':
+    if changed_id == "results":
         reset_status = data["r_status"]
         update_status = data["p_status"]
+        error_status = data["e_status"]
+        # data_status = data["e_message"]
+        # error_message = [
+        #     "Please fix the following error in the LCI file: ",
+        #     html.Br(),
+        #     data_status,
+        # ]
+        error_message = data["e_message"]
     else:
         reset_status = rs
         update_status = us
+        error_status = es
+        error_message = em
 
+    # data_status = data["data_status"]
+    # if not error_status:
     res_new = pd.read_json(data["pd"], orient="split")
-    res_new.loc[res_new['Resource']=='Electricity', tab + "_Sum"] = res_new.loc[res_new['Resource']=='Electricity', tab + "_Sum"] * (1 - re)
+    res_new.loc[res_new["Resource"] == "Electricity", tab + "_Sum"] = res_new.loc[
+        res_new["Resource"] == "Electricity", tab + "_Sum"
+    ] * (1 - re)
     fig1_new = px.bar(
-        res_new, x="Process", y=tab + "_Sum", color="Category", custom_data=["Category"]
+        res_new,
+        x="Process",
+        y=tab + "_Sum",
+        color="Category",
+        custom_data=["Category"],
     )
     fig1_new.update_layout(barmode="stack")
     fig1_new.update_traces(marker_line_width=0)
-    fig1_new.update_layout(title='Breakdown of GHG Emissions by Process')
-    fig1_new.update_xaxes(title='Process')
-    fig1_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
+    fig1_new.update_layout(title="Breakdown of " + tab + " Emissions by Process")
+    fig1_new.update_xaxes(title="Process")
+    fig1_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
 
     fig2_new = make_waterfall_plot(res_new, tab)
     # fig2_new = px.bar(
@@ -488,12 +632,12 @@ def update_figures(json_data, tab, re, rs, us):
     #     color="Process",
     #     custom_data=["Process"],
     # )
-    fig2_new.update_layout(title='Waterfall Chart of GHG Emissions by Inputs')
+    fig2_new.update_layout(title="Waterfall Chart of " + tab + " Emissions by Inputs")
     # fig2_new.update_xaxes(title='Process')
-    fig2_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
+    fig2_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
 
     fig3_new = px.pie(res_new, values=tab + "_Sum", names="Category")
-    fig3_new.update_layout(title='% Contribution to GHG Emissions')
+    fig3_new.update_layout(title="% Contribution to " + tab + " Emissions")
     # fig3_new.update_xaxes(title='Process')
     # fig3_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
@@ -503,11 +647,23 @@ def update_figures(json_data, tab, re, rs, us):
         values=tab + "_Sum",
         color="Process",
     )
-    fig4_new.update_layout(title='Breakdown of GHG Emissions by Inputs')
+    fig4_new.update_layout(title="Breakdown of " + tab + " Emissions by Inputs")
     # fig4_new.update_xaxes(title='Process')
     # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
-    return fig1_new, fig2_new, fig3_new, fig4_new, reset_status, update_status
+    return (
+        fig1_new,
+        fig2_new,
+        fig3_new,
+        fig4_new,
+        reset_status,
+        update_status,
+        error_status,
+        error_message,
+    )
+    # else:
+    #     return f1, f2, f3, f4, reset_status, update_status, error_status, error_message
+
 
 # @app.callback(
 #     Output('debugging', 'children'),
@@ -562,4 +718,4 @@ def update_figures(json_data, tab, re, rs, us):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8888)
+    app.run_server(debug=True)
