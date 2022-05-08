@@ -664,6 +664,19 @@ def update_figures(json_data, tab, re, rs, us, es, em, f1, f2, f3, f4):
     # else:
     #     return f1, f2, f3, f4, reset_status, update_status, error_status, error_message
 
+def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
+    """
+    Calcualte LCA results for multiple LCI files
+    """
+    if list_of_contents is not None:
+        resutls = {}
+        for content, filename, date in zip(list_of_contents, list_of_names, list_of_dates):
+            lci_file = parse_contents(content, filename, date)
+            res = calculation_in_one(lci_file)
+            resulsts.update(filename: res)
+
+        return results
+
 
 # @app.callback(
 #     Output('debugging', 'children'),
