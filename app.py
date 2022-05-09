@@ -699,7 +699,7 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         color="Category",
         custom_data=["Category"],
     )
-    fig1_new.update_layout(barmode="stack")
+    fig1_new.update_layout(barmode="relative")
     fig1_new.update_traces(marker_line_width=0)
     fig1_new.update_layout(title="Breakdown of " + tab + " Emissions by Process")
     fig1_new.update_xaxes(title="Process")
@@ -840,7 +840,7 @@ def update_sensitivity_figures(json_data, tab, es, em):
             color="Category",
             custom_data=["Category"],
         )
-        fig1_sensitivity.update_layout(barmode="stack")
+        fig1_sensitivity.update_layout(barmode="relative")
         fig1_sensitivity.update_traces(marker_line_width=0)
         fig1_sensitivity.update_layout(
             title="Breakdown of " + tab + " Emissions by Process"
