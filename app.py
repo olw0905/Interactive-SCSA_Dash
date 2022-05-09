@@ -250,6 +250,28 @@ content = [
     ),
     dbc.Container(id="dropdown"),
     dbc.Row(id={"type": "datatable", "index": 0}, className="mb-5"),
+    dcc.Upload(
+        id="upload-data-sensitivity",
+        children=html.Div(
+            [
+                "Drag and Drop or ",
+                html.A("Select Files", className="link-primary"),
+            ]
+        ),
+        style={
+            "width": "100%",
+            "height": "60px",
+            "lineHeight": "60px",
+            "borderWidth": "1px",
+            "borderStyle": "dashed",
+            "borderRadius": "5px",
+            "textAlign": "center",
+            "margin": "10px",
+        },
+        # Allow multiple files to be uploaded
+        multiple=True,
+    ),
+    dcc.Graph(id="graph1-sensitivity"),
 ]
 
 app.layout = dbc.Container(
@@ -688,13 +710,42 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
                 if not sensitivity_error_status:
                     sensitivity_error_status = True
                 sensitivity_error_message.extend(
-                    [html.Br(), html.H6(lci_file + ": " + res)]
+                    [html.Br(), html.H6(filename + ": " + res)]
                 )
             else:
-                res["FileName"] = lci_file
+                res["FileName"] = filename.rsplit(".", 1)[0]
                 df = pd.concat([df, res], ignore_index=True)
 
         return df, sensitivity_error_status, sensitivity_error_message
+    return pd.DataFrame(), None, None
+
+@app.callback(
+    Output("graph1-sensitivity", "figure"),
+    Output("upload-data-sensitivity", "contents"),
+    Input("upload-data-sensitivity", "contents"),
+    State("upload-data-sensitivity", "filename"),
+    State("upload-data-sensitivity", "last_modified"),
+
+)
+def update_figures(contents, filenames, dates):
+    df, sensitivity_error_status, sensitivity_error_message = sensitivity_analysis(contents, filenames, dates)
+    if len(df)>0:
+        tab = 'GHG'
+        fig1_sensitivity = px.bar(
+            df,
+            x="FileName",
+            y=tab + "_Sum",
+            color="Category",
+            custom_data=["Category"],
+        )
+        fig1_sensitivity.update_layout(barmode="stack")
+        fig1_sensitivity.update_traces(marker_line_width=0)
+        fig1_sensitivity.update_layout(title="Breakdown of " + tab + " Emissions by Process")
+        fig1_sensitivity.update_xaxes(title="Cases")
+        fig1_sensitivity.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+        return fig1_sensitivity, None
+    else:
+        return go.Figure(), None
 
 
 # @app.callback(
