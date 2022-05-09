@@ -128,17 +128,21 @@ navbar = dbc.Navbar(
 # app.layout = dbc.Container(
 # content = dbc.Container(
 # children=[
-content = [
-    dcc.Store(id="results"),
+# content = [
+#     dcc.Store(id="results"),
+#     html.Br(),
+#     html.H1(children="SOT LCA Results", className="text-dark"),
+#     html.H3(
+#         children="""
+#     RD Production from Corn Stover via Biochem Pathway
+# """,
+#         className="text-muted text-decoration-underline",
+#     ),
+#     html.Hr(),
+# ]
+
+single_file_content = [
     html.Br(),
-    html.H1(children="SOT LCA Results", className="text-dark"),
-    html.H3(
-        children="""
-    RD Production from Corn Stover via Biochem Pathway
-""",
-        className="text-muted text-decoration-underline",
-    ),
-    html.Hr(),
     dbc.Alert(
         html.H4("Reset completed!", className="alert-heading"),
         id="reset_status",
@@ -250,6 +254,25 @@ content = [
     ),
     dbc.Container(id="dropdown"),
     dbc.Row(id={"type": "datatable", "index": 0}, className="mb-5"),
+]
+
+sensitivity_content = [
+    html.Br(),
+    dbc.Alert(
+        [
+            html.H5(
+                "Results cannot be updated due to the following error in the LCI file: ",
+                className="alert-heading",
+            ),
+            # html.Br(),
+            html.H6("", id="sensitivity_error_message"),
+        ],
+        id="sensitivity_error_status",
+        color="danger",
+        # style={"textAlign": "center"},
+        dismissable=True,
+        is_open=False,
+    ),
     dcc.Upload(
         id="upload-data-sensitivity",
         children=html.Div(
@@ -271,7 +294,43 @@ content = [
         # Allow multiple files to be uploaded
         multiple=True,
     ),
+    html.Br(),
+    dbc.Tabs(
+        [
+            dbc.Tab(label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(label="NOx", tab_id="NOx", activeTabClassName="fw-bold fst-italic"),
+        ],
+        id="sensitivity-tabs",
+        active_tab="GHG",
+    ),
+    html.Br(),
     dcc.Graph(id="graph1-sensitivity"),
+]
+
+overall_tabs = dbc.Tabs(
+    [
+        dbc.Tab(single_file_content, label="Single File"),
+        dbc.Tab(sensitivity_content, label="Sensitivity Analysis"),
+        # dbc.Tab(
+        #     "This tab's content is never seen", label="Tab 3", disabled=True
+        # ),
+    ]
+)
+
+content = [
+    dcc.Store(id="results"),
+    dcc.Store(id="sensitivity-results"),
+    html.Br(),
+    html.H1(children="SOT LCA Results", className="text-dark"),
+    html.H3(
+        children="""
+    RD Production from Corn Stover via Biochem Pathway
+""",
+        className="text-muted text-decoration-underline",
+    ),
+    html.Hr(),
+    # html.Br(),
+    overall_tabs,
 ]
 
 app.layout = dbc.Container(
@@ -596,12 +655,12 @@ def update_results(
     State("update_status", "is_open"),
     State("error_status", "is_open"),
     State("error_message", "children"),
-    State("graph1", "figure"),
-    State("graph2", "figure"),
-    State("graph3", "figure"),
-    State("graph4", "figure"),
+    # State("graph1", "figure"),
+    # State("graph2", "figure"),
+    # State("graph3", "figure"),
+    # State("graph4", "figure"),
 )
-def update_figures(json_data, tab, re, rs, us, es, em, f1, f2, f3, f4):
+def update_figures(json_data, tab, re, rs, us, es, em):
     """
     Update the visualizations
     """
@@ -695,10 +754,10 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
         df = pd.DataFrame()
         sensitivity_error_status = False
         sensitivity_error_message = [
-            html.H5(
-                "Errors are found in the following LCI files: ",
-                className="alert-heading",
-            )
+            # html.H5(
+            #     "Errors are found in the following LCI files: ",
+            #     className="alert-heading",
+            # )
         ]
 
         for content, filename, date in zip(
@@ -709,9 +768,8 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
             if isinstance(res, str):
                 if not sensitivity_error_status:
                     sensitivity_error_status = True
-                sensitivity_error_message.extend(
-                    [html.Br(), html.H6(filename + ": " + res)]
-                )
+                # sensitivity_error_message.extend([html.H6(filename + ": " + res)])
+                sensitivity_error_message.append(filename + ": " + res)
             else:
                 res["FileName"] = filename.rsplit(".", 1)[0]
                 df = pd.concat([df, res], ignore_index=True)
@@ -719,18 +777,62 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
         return df, sensitivity_error_status, sensitivity_error_message
     return pd.DataFrame(), None, None
 
+
 @app.callback(
-    Output("graph1-sensitivity", "figure"),
+    Output("sensitivity-results", "data"),
     Output("upload-data-sensitivity", "contents"),
     Input("upload-data-sensitivity", "contents"),
     State("upload-data-sensitivity", "filename"),
     State("upload-data-sensitivity", "last_modified"),
-
+    # State("sensitivity_error_status", "is_open"),
+    # State("sensitivity_error_message", "children"),
 )
-def update_figures(contents, filenames, dates):
-    df, sensitivity_error_status, sensitivity_error_message = sensitivity_analysis(contents, filenames, dates)
-    if len(df)>0:
-        tab = 'GHG'
+def update_sensitivity_results(contents, filenames, dates):
+    df, sensitivity_error_status, sensitivity_error_message = sensitivity_analysis(
+        contents, filenames, dates
+    )
+    data_to_return = {
+        # "status": data_status,
+        "pd": df.to_json(date_format="iso", orient="split"),
+        "e_status": sensitivity_error_status,
+        "e_message": sensitivity_error_message,
+    }
+    return json.dumps(data_to_return), None
+
+
+@app.callback(
+    Output("graph1-sensitivity", "figure"),
+    Output("sensitivity_error_status", "is_open"),
+    Output("sensitivity_error_message", "children"),
+    Input("sensitivity-results", "data"),
+    Input("sensitivity-tabs", "active_tab"),
+    State("sensitivity_error_status", "is_open"),
+    State("sensitivity_error_message", "children"),
+)
+def update_sensitivity_figures(json_data, tab, es, em):
+    data = json.loads(json_data)
+    ctx = dash.callback_context
+    changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if changed_id == "sensitivity-results":
+        sensitivity_error_status = data["e_status"]
+        sensitivity_error_message = data["e_message"]
+        if sensitivity_error_status:
+            children = []
+            for message in sensitivity_error_message:
+                children.extend([message, html.Br()])
+            children = children[:-1]
+
+    else:
+        sensitivity_error_status = es
+        # sensitivity_error_message = em
+        children = em
+
+    df = pd.read_json(data["pd"], orient="split")
+    print(df)
+    print("test")
+
+    if len(df) > 0:
         fig1_sensitivity = px.bar(
             df,
             x="FileName",
@@ -740,64 +842,22 @@ def update_figures(contents, filenames, dates):
         )
         fig1_sensitivity.update_layout(barmode="stack")
         fig1_sensitivity.update_traces(marker_line_width=0)
-        fig1_sensitivity.update_layout(title="Breakdown of " + tab + " Emissions by Process")
+        fig1_sensitivity.update_layout(
+            title="Breakdown of " + tab + " Emissions by Process"
+        )
         fig1_sensitivity.update_xaxes(title="Cases")
         fig1_sensitivity.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
-        return fig1_sensitivity, None
+        # children = []
+        # for message in sensitivity_error_message:
+        # children.extend([message, html.Br()])
+        return (
+            fig1_sensitivity,
+            sensitivity_error_status,
+            # sensitivity_error_message,
+            children,
+        )
     else:
-        return go.Figure(), None
-
-
-# @app.callback(
-#     Output('debugging', 'children'),
-#     Input({'type': 'update-lci', 'index': ALL}, 'n_clicks'),
-#     # Input('update-lci', 'n_clicks'),
-#     State({'type': 'lci_datatable', 'index': ALL}, 'data'),
-#     )
-# def show_debugging(clicks, data):
-#     print('test')
-#     print(clicks, data)
-#     if len(data)==0:
-#         return ''
-#     # return pd.DataFrame(data[0])
-#     df = pd.DataFrame(data[0])
-#     print(df)
-#     return df.iloc[0, 0]
-#     # return DataTable(
-#     #             # id = {'type': 'lci_datatable', 'index': 0},
-#     #             data = df.to_dict('records'),
-#     #             # columns=[{'id': c, 'name': c} for c in df.columns],
-#     #             columns=cols,
-#     #             fixed_rows={'headers': True},
-#     #             style_cell={
-#     #                 'minWidth': 95,
-#     #                 'maxWidth': 95,
-#     #                 'width': 95,
-#     #                 'whiteSpace': 'normal',
-#     #                 'height': 'auto',
-#     #                 'lineHeight': '15px',
-#     #             },
-#     #             style_header={
-#     #                 'backgroundColor': 'rgb(210, 210, 210)',
-#     #                 'fontWeight': 'bold',
-#     #             },
-#     #             style_data_conditional=[
-#     #                 {
-#     #                     'if': {'row_index': 'odd'},
-#     #                     'backgroundColor': 'rgb(220, 220, 220)'
-#     #                 }
-#     #             ],
-#     #             style_table={
-#     #                 'height': 400,
-#     #                 'overflowX': 'auto',
-#     #             },
-#     #             tooltip_data=[
-#     #                 {
-#     #                     column: {'value': str(value), 'type': 'markdown'} for column, value in row.items()
-#     #                 } for row in df.to_dict('records')
-#     #             ],
-#     #             tooltip_duration=None
-#     #         )
+        return go.Figure(), False, ""
 
 
 if __name__ == "__main__":
