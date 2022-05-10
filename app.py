@@ -832,33 +832,34 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
             }
             lci_data_sensitivity.update({filename: lci_data})
 
-            # res = calculation_in_one(lci_file)
-            data_status = data_check(
-                lci_mapping, coproduct_mapping, final_process_mapping
-            )
-            if data_status != "OK":
-                # if isinstance(res, str):
-                if not sensitivity_error_status:
-                    sensitivity_error_status = True
-                # sensitivity_error_message.extend([html.H6(filename + ": " + res)])
-                sensitivity_error_message.append(filename + ": " + data_status)
-            else:
-                overall_lci = generate_final_lci(
-                    lci_mapping, coproduct_mapping, final_process_mapping
-                )
-                res = calc(overall_lci)
-                res["FileName"] = filename.rsplit(".", 1)[0]
-                df = pd.concat([df, res], ignore_index=True)
+            # # res = calculation_in_one(lci_file)
+            # data_status = data_check(
+            #     lci_mapping, coproduct_mapping, final_process_mapping
+            # )
+            # if data_status != "OK":
+            #     # if isinstance(res, str):
+            #     if not sensitivity_error_status:
+            #         sensitivity_error_status = True
+            #     # sensitivity_error_message.extend([html.H6(filename + ": " + res)])
+            #     sensitivity_error_message.append(filename + ": " + data_status)
+            # else:
+            #     overall_lci = generate_final_lci(
+            #         lci_mapping, coproduct_mapping, final_process_mapping
+            #     )
+            #     res = calc(overall_lci)
+            #     res["FileName"] = filename.rsplit(".", 1)[0]
+            #     df = pd.concat([df, res], ignore_index=True)
 
         return (
-            df,
-            sensitivity_error_status,
-            sensitivity_error_message,
+            # df,
+            # sensitivity_error_status,
+            # sensitivity_error_message,
             coproduct_mapping_sensitivity,
             final_process_sensitivity,
             lci_data_sensitivity,
         )
-    return pd.DataFrame(), None, None, {}, {}, {}
+    # return pd.DataFrame(), None, None, {}, {}, {}
+    return {}, {}, {}
 
 
 @app.callback(
@@ -888,9 +889,9 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
 
     if contents:
         (
-            df,
-            sensitivity_error_status,
-            sensitivity_error_message,
+            # df,
+            # sensitivity_error_status,
+            # sensitivity_error_message,
             coproduct_mapping_sensitivity,
             final_process_sensitivity,
             lci_data_sensitivity,
@@ -901,35 +902,34 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
         lci_data_sensitivity = data["lci_data_sensitivity"]
         final_process_sensitivity = data["final_process_sensitivity"]
         coproduct_mapping_sensitivity = data["coproduct_mapping_sensitivity"]
-        for filename in lci_data_sensitivity.keys():
-            lci_mapping = {
-                key: pd.read_json(value, orient="split")
-                for key, value in lci_data_sensitivity[filename].items()
-            }
-            final_process_mapping = final_process_sensitivity[filename]
-            if coproduct != "User Specification":
-                coproduct_mapping = {
-                    key: coproduct for key in coproduct_mapping_sensitivity[filename]
-                }
-            else:
-                coproduct_mapping = coproduct_mapping_sensitivity[filename].copy()
 
-            data_status = data_check(
+    for filename in lci_data_sensitivity.keys():
+        lci_mapping = {
+            key: pd.read_json(value, orient="split")
+            for key, value in lci_data_sensitivity[filename].items()
+        }
+        final_process_mapping = final_process_sensitivity[filename]
+        if coproduct != "User Specification":
+            coproduct_mapping = {
+                key: coproduct for key in coproduct_mapping_sensitivity[filename]
+            }
+        else:
+            coproduct_mapping = coproduct_mapping_sensitivity[filename].copy()
+
+        data_status = data_check(lci_mapping, coproduct_mapping, final_process_mapping)
+        if data_status != "OK":
+            # if isinstance(res, str):
+            if not sensitivity_error_status:
+                sensitivity_error_status = True
+            # sensitivity_error_message.extend([html.H6(filename + ": " + res)])
+            sensitivity_error_message.append(filename + ": " + data_status)
+        else:
+            overall_lci = generate_final_lci(
                 lci_mapping, coproduct_mapping, final_process_mapping
             )
-            if data_status != "OK":
-                # if isinstance(res, str):
-                if not sensitivity_error_status:
-                    sensitivity_error_status = True
-                # sensitivity_error_message.extend([html.H6(filename + ": " + res)])
-                sensitivity_error_message.append(filename + ": " + data_status)
-            else:
-                overall_lci = generate_final_lci(
-                    lci_mapping, coproduct_mapping, final_process_mapping
-                )
-                lca_res = calc(overall_lci)
-                lca_res["FileName"] = filename.rsplit(".", 1)[0]
-                df = pd.concat([df, lca_res], ignore_index=True)
+            lca_res = calc(overall_lci)
+            lca_res["FileName"] = filename.rsplit(".", 1)[0]
+            df = pd.concat([df, lca_res], ignore_index=True)
 
     data_to_return = {
         # "status": data_status,
