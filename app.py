@@ -21,20 +21,6 @@ import json
 from calc import read_data, calc, calculation_in_one, generate_final_lci, data_check
 from utils import format_input
 
-# external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-# update_success = 'Update Completed!'
-# update_fail = 'Update Failed!'
-# reset_text = 'Reset Completed!'
-
-# success_color = 'green'
-# fail_color = 'red'
-# reset_color = 'blue'
-
-# success_style={'color': 'green'}
-# fail_color={'color': 'red'}
-
-
 # app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.BOOTSTRAP])
@@ -124,22 +110,6 @@ navbar = dbc.Navbar(
     # expand='lg',
     # style={'width':'100%'}
 )
-
-# app.layout = dbc.Container(
-# content = dbc.Container(
-# children=[
-# content = [
-#     dcc.Store(id="results"),
-#     html.Br(),
-#     html.H1(children="SOT LCA Results", className="text-dark"),
-#     html.H3(
-#         children="""
-#     RD Production from Corn Stover via Biochem Pathway
-# """,
-#         className="text-muted text-decoration-underline",
-#     ),
-#     html.Hr(),
-# ]
 
 single_file_content = [
     html.Br(),
@@ -257,7 +227,9 @@ single_file_content = [
                                 placeholder="Select co-product handling method",
                             )
                         ),
-                    ]
+                    ],
+                    color="secondary",
+                    outline=True,
                 ),
                 width=6,
             ),
@@ -285,7 +257,9 @@ single_file_content = [
                             ),
                         ]
                     ),
-                ]
+                ],
+                color="secondary",
+                outline=True,
             ),
             # width={"size": 6, "offset": 3}
         ),
@@ -378,7 +352,8 @@ sensitivity_content = [
                     placeholder="Select co-product handling method",
                 ),
             ),
-        ], className="mb-4"
+        ],
+        className="mb-4",
     ),
     # html.Br(),
     dbc.Tabs(
@@ -395,11 +370,8 @@ sensitivity_content = [
 
 overall_tabs = dbc.Tabs(
     [
-        dbc.Tab(single_file_content, label="Single File"),
+        dbc.Tab(single_file_content, label="Case Study"),
         dbc.Tab(sensitivity_content, label="Sensitivity Analysis"),
-        # dbc.Tab(
-        #     "This tab's content is never seen", label="Tab 3", disabled=True
-        # ),
     ]
 )
 
@@ -415,7 +387,6 @@ content = [
         className="text-muted text-decoration-underline",
     ),
     html.Hr(),
-    # html.Br(),
     overall_tabs,
 ]
 
@@ -476,7 +447,6 @@ def make_waterfall_plot(res, metric="GHG", n=4):
 
     fig = go.Figure(
         go.Waterfall(
-            # name = "20",
             orientation="v",
             measure=["relative"] * len(for_plot) + ["total"],
             x=for_plot["Resource"].to_list() + ["Total"],
@@ -491,7 +461,6 @@ def make_waterfall_plot(res, metric="GHG", n=4):
     )
 
     fig.update_layout(
-        # title = col,
         showlegend=False
     )
 
@@ -526,7 +495,6 @@ def show_datatable(process_to_edit, stored_data, rs):
             DataTable(
                 id={"type": "lci_datatable", "index": 0},
                 data=df.to_dict("records"),
-                # columns=[{'id': c, 'name': c} for c in df.columns],
                 columns=cols,
                 fixed_rows={"headers": True},
                 style_cell={
@@ -615,11 +583,23 @@ def update_results(
     update_status = False
     error_status = False
     dropdown_items = []
-    lci_data = {}
-    coproduct_mapping = {}
-    final_process_mapping = {}
+    # lci_data = {}
+    # coproduct_mapping = {}
+    # final_process_mapping = {}
     data_status = "OK"
-    # error_message = ""
+    # # error_message = ""
+
+    lci_mapping, coproduct_mapping, final_process_mapping = read_data(
+        "2021 Biochem SOT via BDO_working.xlsm"
+    )
+    lci_data = {
+        key: value.to_json(orient="split", date_format="iso")
+        for key, value in lci_mapping.items()
+    }
+    overall_lci = generate_final_lci(
+        lci_mapping, coproduct_mapping, final_process_mapping
+    )
+    res_new = calc(overall_lci)
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -717,22 +697,6 @@ def update_results(
             data = json.loads(stored_data)
             res_new = pd.read_json(data["pd"], orient="split")
             error_status = True
-            # error_message = [
-            #     "Please fix the following error in the LCI file: ",
-            #     html.Br(),
-            #     data_status,
-            # ]
-            # error_message = data_status
-    # elif 'update-lci' in changed_id:
-    #     # step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
-    #     # res_new = calc(sheet_names, step_mapping)
-    #     res_new = calc(lci_mapping)
-    #     update_status = True
-
-    else:
-        res_new = res.copy()  # Initialization of the app
-
-    # return res_new.to_json(date_format='iso', orient='split'), reset_status, update_status, None
 
     data_to_return = {
         # "status": data_status,
@@ -766,10 +730,6 @@ def update_results(
     State("update_status", "is_open"),
     State("error_status", "is_open"),
     State("error_message", "children"),
-    # State("graph1", "figure"),
-    # State("graph2", "figure"),
-    # State("graph3", "figure"),
-    # State("graph4", "figure"),
 )
 def update_figures(json_data, tab, re, rs, us, es, em):
     """
@@ -856,8 +816,6 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         error_status,
         error_message,
     )
-    # else:
-    #     return f1, f2, f3, f4, reset_status, update_status, error_status, error_message
 
 
 def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
@@ -866,14 +824,6 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
     """
     if list_of_contents is not None:
         df = pd.DataFrame()
-        sensitivity_error_status = False
-        sensitivity_error_message = [
-            # html.H5(
-            #     "Errors are found in the following LCI files: ",
-            #     className="alert-heading",
-            # )
-        ]
-        # lci_mapping_sensitivity = {}
         coproduct_mapping_sensitivity = {}
         final_process_sensitivity = {}
         lci_data_sensitivity = {}
@@ -893,33 +843,11 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
             }
             lci_data_sensitivity.update({filename: lci_data})
 
-            # # res = calculation_in_one(lci_file)
-            # data_status = data_check(
-            #     lci_mapping, coproduct_mapping, final_process_mapping
-            # )
-            # if data_status != "OK":
-            #     # if isinstance(res, str):
-            #     if not sensitivity_error_status:
-            #         sensitivity_error_status = True
-            #     # sensitivity_error_message.extend([html.H6(filename + ": " + res)])
-            #     sensitivity_error_message.append(filename + ": " + data_status)
-            # else:
-            #     overall_lci = generate_final_lci(
-            #         lci_mapping, coproduct_mapping, final_process_mapping
-            #     )
-            #     res = calc(overall_lci)
-            #     res["FileName"] = filename.rsplit(".", 1)[0]
-            #     df = pd.concat([df, res], ignore_index=True)
-
         return (
-            # df,
-            # sensitivity_error_status,
-            # sensitivity_error_message,
             coproduct_mapping_sensitivity,
             final_process_sensitivity,
             lci_data_sensitivity,
         )
-    # return pd.DataFrame(), None, None, {}, {}, {}
     return {}, {}, {}
 
 
