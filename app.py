@@ -460,9 +460,7 @@ def make_waterfall_plot(res, metric="GHG", n=4):
         )
     )
 
-    fig.update_layout(
-        showlegend=False
-    )
+    fig.update_layout(showlegend=False)
 
     return fig
 
@@ -583,50 +581,49 @@ def update_results(
     update_status = False
     error_status = False
     dropdown_items = []
-    # lci_data = {}
-    # coproduct_mapping = {}
-    # final_process_mapping = {}
+    lci_data = {}
+    coproduct_mapping = {}
+    final_process_mapping = {}
     data_status = "OK"
+    dropdown_value = None
+    uploaded = False  # Whether a new LCI file has been uploaded
     # # error_message = ""
 
-    lci_mapping, coproduct_mapping, final_process_mapping = read_data(
-        "2021 Biochem SOT via BDO_working.xlsm"
-    )
-    lci_data = {
-        key: value.to_json(orient="split", date_format="iso")
-        for key, value in lci_mapping.items()
-    }
-    overall_lci = generate_final_lci(
-        lci_mapping, coproduct_mapping, final_process_mapping
-    )
-    res_new = calc(overall_lci)
+    # lci_mapping, coproduct_mapping, final_process_mapping = read_data(
+    #     "2021 Biochem SOT via BDO_working.xlsm"
+    # )
+    # lci_data = {
+    #     key: value.to_json(orient="split", date_format="iso")
+    #     for key, value in lci_mapping.items()
+    # }
+    # overall_lci = generate_final_lci(
+    #     lci_mapping, coproduct_mapping, final_process_mapping
+    # )
+    # res_new = calc(overall_lci)
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if changed_id == "reset-button":
-        res_new = res.copy()
-        reset_status = True
-        # data_status = "OK"
-        # return res.to_json(date_format='iso', orient='split'), reset_status, update_status
+    # data_status = "OK"
+    # return res.to_json(date_format='iso', orient='split'), reset_status, update_status
 
-    elif (
-        contents or ("update-lci" in changed_id) or (changed_id == "coproduct-handling")
-    ):
+    if contents or ("update-lci" in changed_id) or (changed_id == "coproduct-handling"):
         if contents:
             lci_new = parse_contents(contents, filename, date)
             # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
             lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_new)
 
-            dropdown_value = None
+            # dropdown_value = None
 
-            updated_coproduct_mapping = coproduct_mapping.copy()
+            # updated_coproduct_mapping = coproduct_mapping.copy()
+            uploaded = True
 
             # sheet_names = list(lci_mapping.keys())
             # step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
         else:
             data = json.loads(stored_data)
+            uploaded = data["uploaded"]
             lci_data = data["lci"]
             lci_mapping = {
                 key: pd.read_json(value, orient="split")
@@ -641,47 +638,45 @@ def update_results(
                 # sheet_names = list(lci_mapping.keys())
                 lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
                 dropdown_value = process_to_edit[0]
-                dropdown_items = [
-                    dbc.Row(
-                        [
-                            dbc.Col(html.H5(["Edit Life Cycle Inventory Data"])),
-                            # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
-                        ]
-                    ),
-                    # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
-                    dbc.Row(
-                        [
-                            dbc.Col(
-                                dcc.Dropdown(
-                                    list(lci_mapping.keys()),
-                                    id={"type": "process_dropdown", "index": 0},
-                                    value=dropdown_value,
-                                )
-                            ),
-                            dbc.Col(
-                                dbc.Button(
-                                    "Update",
-                                    color="success",
-                                    className="mb-3",
-                                    id={"type": "update-lci", "index": 0},
-                                ),
-                                width="auto",
-                            ),
-                        ]
-                    ),
-                ]
+                # dropdown_items = [
+                #     dbc.Row(
+                #         [
+                #             dbc.Col(html.H5(["Edit Life Cycle Inventory Data"])),
+                #             # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
+                #         ]
+                #     ),
+                #     # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
+                #     dbc.Row(
+                #         [
+                #             dbc.Col(
+                #                 dcc.Dropdown(
+                #                     list(lci_mapping.keys()),
+                #                     id={"type": "process_dropdown", "index": 0},
+                #                     value=dropdown_value,
+                #                 )
+                #             ),
+                #             dbc.Col(
+                #                 dbc.Button(
+                #                     "Update",
+                #                     color="success",
+                #                     className="mb-3",
+                #                     id={"type": "update-lci", "index": 0},
+                #                 ),
+                #                 width="auto",
+                #             ),
+                #         ]
+                #     ),
+                # ]
 
-            if coproduct != "User Specification":
-                updated_coproduct_mapping = {
-                    key: coproduct for key in coproduct_mapping
-                }
-            else:
-                updated_coproduct_mapping = coproduct_mapping.copy()
+        if coproduct != "User Specification":
+            updated_coproduct_mapping = {key: coproduct for key in coproduct_mapping}
+        else:
+            updated_coproduct_mapping = coproduct_mapping.copy()
 
-        lci_data = {
-            key: value.to_json(orient="split", date_format="iso")
-            for key, value in lci_mapping.items()
-        }
+        # lci_data = {
+        #     key: value.to_json(orient="split", date_format="iso")
+        #     for key, value in lci_mapping.items()
+        # }
         # res_new = calc(sheet_names, step_mapping)
         # res_new = calc(lci_mapping, final_process_mapping)
         data_status = data_check(
@@ -698,6 +693,58 @@ def update_results(
             res_new = pd.read_json(data["pd"], orient="split")
             error_status = True
 
+    else:
+        if changed_id == "reset-button":
+            reset_status = True
+        lci_mapping, coproduct_mapping, final_process_mapping = read_data(
+            "2021 Biochem SOT via BDO_working.xlsm"
+        )
+        # lci_data = {
+        #     key: value.to_json(orient="split", date_format="iso")
+        #     for key, value in lci_mapping.items()
+        # }
+        overall_lci = generate_final_lci(
+            lci_mapping, coproduct_mapping, final_process_mapping
+        )
+        res_new = calc(overall_lci)
+
+    lci_data = {
+        key: value.to_json(orient="split", date_format="iso")
+        for key, value in lci_mapping.items()
+    }
+
+    if uploaded:
+        dropdown_items = [
+            dbc.Row(
+                [
+                    dbc.Col(html.H5(["Edit Life Cycle Inventory Data"])),
+                    # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
+                ]
+            ),
+            # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dcc.Dropdown(
+                            list(lci_mapping.keys()),
+                            id={"type": "process_dropdown", "index": 0},
+                            value=dropdown_value,
+                            # value=None,
+                        )
+                    ),
+                    dbc.Col(
+                        dbc.Button(
+                            "Update",
+                            color="success",
+                            className="mb-3",
+                            id={"type": "update-lci", "index": 0},
+                        ),
+                        width="auto",
+                    ),
+                ]
+            ),
+        ]
+
     data_to_return = {
         # "status": data_status,
         "pd": res_new.to_json(date_format="iso", orient="split"),
@@ -708,6 +755,7 @@ def update_results(
         "p_status": update_status,
         "e_status": error_status,
         "e_message": data_status,
+        "uploaded": uploaded,
     }
 
     return json.dumps(data_to_return), dropdown_items, None, 0
