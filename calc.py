@@ -175,7 +175,7 @@ def allocation(df, basis="mass"):
     allocated = df[~not_allocated].copy()
 
     # allocated['Ratio'] = allocated
-    allocated["Amount"] = allocated["Amount"] * allocated["Product Train"].map(
+    allocated["Amount"] = allocated["Amount"] * allocated["Product Train"].fillna("Both").map(
         {"Both": ratio, "Co-product": 0, "Main product": 1}
     ).fillna(ratio)
 

@@ -174,21 +174,6 @@ single_file_content = [
         dismissable=True,
         is_open=False,
     ),
-    dcc.Dropdown(
-        [
-            "User Specification",
-            "Displacement Method",
-            "System Level Mass-Based Allocation",
-            "System Level Energy-Based Allocation",
-            "System Level Value-Based Allocation",
-            "Process Level Mass-Based Allocation",
-            "Process Level Energy-Based Allocation",
-            "Process Level Value-Based Allocation",
-        ],
-        "User Specification",
-        id="coproduct-handling",
-        placeholder="Select co-product handling method",
-    ),
     dbc.Row(
         [
             dbc.Col(
@@ -226,23 +211,85 @@ single_file_content = [
                 width="auto",
                 className="align-self-center",
             ),
-        ]
+        ],
+        className="mb-3",
+    ),
+    dbc.Row(
+        [
+            dbc.Col(
+                dbc.Card(
+                    [
+                        dbc.CardHeader(
+                            "Summary",
+                            # className="fw-bold"
+                        ),
+                        dbc.CardBody(
+                            [
+                                html.H4("", className="card-title", id="summary"),
+                                # html.H6("20 g/MJ", className="card-subtitle"),
+                            ]
+                        ),
+                    ],
+                    color="success",
+                    inverse=True,
+                    # outline=True,
+                ),
+                width=6,
+            ),
+            dbc.Col(
+                dbc.Card(
+                    [
+                        dbc.CardHeader("Select Co-product Handling Method"),
+                        dbc.CardBody(
+                            dcc.Dropdown(
+                                [
+                                    "User Specification",
+                                    "Displacement Method",
+                                    "System Level Mass-Based Allocation",
+                                    "System Level Energy-Based Allocation",
+                                    "System Level Value-Based Allocation",
+                                    "Process Level Mass-Based Allocation",
+                                    "Process Level Energy-Based Allocation",
+                                    "Process Level Value-Based Allocation",
+                                ],
+                                "User Specification",
+                                id="coproduct-handling",
+                                placeholder="Select co-product handling method",
+                            )
+                        ),
+                    ]
+                ),
+                width=6,
+            ),
+        ],
+        className="mb-4",
     ),
     dbc.Row(
         dbc.Col(
-            [
-                html.H5("Renewable Electricity %", className="text-center"),
-                dcc.Slider(
-                    0,
-                    1,
-                    step=None,
-                    marks={val: "{:.0%}".format(val) for val in np.linspace(0, 1, 11)},
-                    value=0,
-                    id="renewable_elec",
-                ),
-            ],
+            dbc.Card(
+                [
+                    dbc.CardHeader("Quick Sensitivity Analysis"),
+                    dbc.CardBody(
+                        [
+                            html.H5("Renewable Electricity %", className="text-center"),
+                            dcc.Slider(
+                                0,
+                                1,
+                                step=None,
+                                marks={
+                                    val: "{:.0%}".format(val)
+                                    for val in np.linspace(0, 1, 11)
+                                },
+                                value=0,
+                                id="renewable_elec",
+                            ),
+                        ]
+                    ),
+                ]
+            ),
             # width={"size": 6, "offset": 3}
-        )
+        ),
+        className="mb-4",
     ),
     dbc.Tabs(
         [
@@ -288,27 +335,13 @@ sensitivity_content = [
         dismissable=True,
         is_open=False,
     ),
-    dcc.Dropdown(
-        [
-            "User Specification",
-            "Displacement Method",
-            "System Level Mass-Based Allocation",
-            "System Level Energy-Based Allocation",
-            "System Level Value-Based Allocation",
-            "Process Level Mass-Based Allocation",
-            "Process Level Energy-Based Allocation",
-            "Process Level Value-Based Allocation",
-        ],
-        "User Specification",
-        id="coproduct-handling-sensitivity",
-        placeholder="Select co-product handling method",
-    ),
     dcc.Upload(
         id="upload-data-sensitivity",
         children=html.Div(
             [
                 "Drag and Drop or ",
-                html.A("Select Files", className="link-primary"),
+                html.A("Select Multiple LCI Files", className="link-primary"),
+                " For Sensitivity Analysis",
             ]
         ),
         style={
@@ -319,12 +352,35 @@ sensitivity_content = [
             "borderStyle": "dashed",
             "borderRadius": "5px",
             "textAlign": "center",
-            "margin": "10px",
+            # "margin": "10px",
         },
         # Allow multiple files to be uploaded
         multiple=True,
+        className="mb-4",
     ),
-    html.Br(),
+    dbc.Card(
+        [
+            dbc.CardHeader("Select Co-product Handling Method"),
+            dbc.CardBody(
+                dcc.Dropdown(
+                    [
+                        "User Specification",
+                        "Displacement Method",
+                        "System Level Mass-Based Allocation",
+                        "System Level Energy-Based Allocation",
+                        "System Level Value-Based Allocation",
+                        "Process Level Mass-Based Allocation",
+                        "Process Level Energy-Based Allocation",
+                        "Process Level Value-Based Allocation",
+                    ],
+                    "User Specification",
+                    id="coproduct-handling-sensitivity",
+                    placeholder="Select co-product handling method",
+                ),
+            ),
+        ], className="mb-4"
+    ),
+    # html.Br(),
     dbc.Tabs(
         [
             dbc.Tab(label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"),
@@ -333,7 +389,7 @@ sensitivity_content = [
         id="sensitivity-tabs",
         active_tab="GHG",
     ),
-    html.Br(),
+    # html.Br(),
     dcc.Graph(id="graph1-sensitivity"),
 ]
 
@@ -698,6 +754,7 @@ def update_results(
     Output("graph2", "figure"),
     Output("graph3", "figure"),
     Output("graph4", "figure"),
+    Output("summary", "children"),
     Output("reset_status", "is_open"),
     Output("update_status", "is_open"),
     Output("error_status", "is_open"),
@@ -785,11 +842,15 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     # fig4_new.update_xaxes(title='Process')
     # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
+    total = res_new[tab + "_Sum"].sum()
+    summary = f"Life-Cycle {tab} Emissions: {total:.1f} g/MJ"
+
     return (
         fig1_new,
         fig2_new,
         fig3_new,
         fig4_new,
+        summary,
         reset_status,
         update_status,
         error_status,
