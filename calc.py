@@ -1,8 +1,4 @@
-from asyncio import as_completed
-from asyncore import read
 import pandas as pd
-
-# from lookup_table import lookup_table
 from utils import process, format_input, calculate_lca, unit_conversion
 
 category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
@@ -258,29 +254,6 @@ def calc(overall_lci):
     basis: the basis for allocation methods. Must be one of the following: "mass", "energy", or "value".
     """
 
-    # sheet_names = list(lci_mapping.keys())
-    # step_mapping = {sheet: format_input(df) for sheet, df in lci_mapping.items()}
-
-    # if coprod == "process allocation":
-    #     step_mapping = {
-    #         sheet: allocation(df, basis) for sheet, df in step_mapping.items()
-    #     }
-
-    # lcis = process(step_mapping)
-
-    # # Locate the last process
-    # for sheet, process_bool in final_process_mapping.items():
-    #     if process_bool = "Yes":
-    #         final_process = sheet
-    #         break
-
-    # overall_lci = lcis[final_process]
-    # # overall_lci = overall_lci[overall_lci['Type']=='Input'].copy()
-    # # overall_lci['ID'] = overall_lci.apply(
-    # #     # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
-    # #     lambda a: a['Resource'] if pd.isna(a['End Use']) else a['Resource']+'_'+a['End Use'], axis=1
-    # # )
-    # overall_lci = overall_lci.groupby(['Type', 'Resource', 'Process'], as_index=False)['Amount'].sum()
     overall_lci["End Use"] = overall_lci["End Use"].fillna("")
     overall_lci["ID"] = overall_lci.apply(
         # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
@@ -305,25 +278,25 @@ def calc(overall_lci):
     return res
 
 
-def calculation_in_one(lci_file):
-    """
-    Calculate the results from the uploaded LCI file.
-
-    Parameter:
-        lci_file: uploaded LCI file
-
-    Return:
-        res: the dataframe containing the final LCA results
-    """
-    lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_file)
-    data_status = data_check(lci_mapping, coproduct_mapping, final_process_mapping)
-
-    if data_status == "OK":
-        overall_lci = generate_final_lci(
-            lci_mapping, coproduct_mapping, final_process_mapping
-        )
-        res = calc(overall_lci)
-        return res
-
-    else:
-        return data_status
+# def calculation_in_one(lci_file):
+#     """
+#     Calculate the results from the uploaded LCI file.
+#
+#     Parameter:
+#         lci_file: uploaded LCI file
+#
+#     Return:
+#         res: the dataframe containing the final LCA results
+#     """
+#     lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_file)
+#     data_status = data_check(lci_mapping, coproduct_mapping, final_process_mapping)
+#
+#     if data_status == "OK":
+#         overall_lci = generate_final_lci(
+#             lci_mapping, coproduct_mapping, final_process_mapping
+#         )
+#         res = calc(overall_lci)
+#         return res
+#
+#     else:
+#         return data_status

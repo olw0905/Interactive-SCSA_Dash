@@ -1,53 +1,23 @@
 import base64
-
-# import datetime
 import io
 import plotly.graph_objs as go
+import plotly.express as px
 import numpy as np
 
 import dash
 from dash import dcc, html, MATCH, ALL
 from dash.dash_table import DataTable, FormatTemplate
 from dash.dash_table.Format import Format, Scheme, Trim
-
-# from dash import html
 from dash.dependencies import Input, Output, State
-
-# from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import plotly.express as px
 import pandas as pd
 import json
-from calc import read_data, calc, calculation_in_one, generate_final_lci, data_check
-from utils import format_input
+from calc import read_data, calc, generate_final_lci, data_check
 
-# app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.BOOTSTRAP])
 
 server = app.server
-
-
-def calculate(df_lci):
-    """
-    Calculate initial (default) results
-    """
-    df = pd.merge(df_lci, lookup, left_on="Input", right_index=True)
-    metrics = ["NOx", "GHG"]
-    for metric in metrics:
-        df[metric + "_Sum"] = df["Usage"] * df[metric]
-    return df
-
-
-# Read Data
-# lookup = pd.read_excel("Metric_table_sample.xlsx", index_col=0).transpose()
-# lci = pd.read_excel("upload_sample_LCI.xlsx")
-# res = calculate(lci)
-# res["Resource"] = res["Input"]
-# res["Input Amount"] = res["Usage"]
-
-res = calculation_in_one("2021 Biochem SOT via BDO_working.xlsm")
-
 
 nav_item = dbc.Nav(
     [
@@ -196,7 +166,6 @@ single_file_content = [
                         dbc.CardBody(
                             [
                                 html.H4("", className="card-title", id="summary"),
-                                # html.H6("20 g/MJ", className="card-subtitle"),
                             ]
                         ),
                     ],
@@ -300,7 +269,6 @@ sensitivity_content = [
                 "Results cannot be updated due to the following error in the LCI file: ",
                 className="alert-heading",
             ),
-            # html.Br(),
             html.H6("", id="sensitivity_error_message"),
         ],
         id="sensitivity_error_status",
@@ -355,7 +323,6 @@ sensitivity_content = [
         ],
         className="mb-4",
     ),
-    # html.Br(),
     dbc.Tabs(
         [
             dbc.Tab(label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"),
@@ -364,7 +331,6 @@ sensitivity_content = [
         id="sensitivity-tabs",
         active_tab="GHG",
     ),
-    # html.Br(),
     dcc.Graph(id="graph1-sensitivity"),
 ]
 
@@ -403,19 +369,11 @@ def parse_contents(contents, filename, date):
     content_type, content_string = contents.split(",")
 
     decoded = base64.b64decode(content_string)
-    try:
-        if "csv" in filename:
-            # Assume that the user uploaded a CSV file
-            # df_upload = pd.read_csv(
-            # io.StringIO(decoded.decode('utf-8')))
-            lci_file = io.StringIO(decoded.decode("utf-8"))
-        elif "xls" in filename:
-            # Assume that the user uploaded an excel file
-            # df_upload = pd.read_excel(io.BytesIO(decoded))
-            lci_file = io.BytesIO(decoded)
-    except Exception as e:
-        print(e)
-        return html.Div(["There was an error processing this file."])
+    if "xls" in filename:
+        # Assume that the user uploaded an excel file
+        lci_file = io.BytesIO(decoded)
+    else:
+        lci_file = "Only .xls files are supported."
 
     return lci_file
 
@@ -587,41 +545,20 @@ def update_results(
     data_status = "OK"
     dropdown_value = None
     uploaded = False  # Whether a new LCI file has been uploaded
-    # # error_message = ""
-
-    # lci_mapping, coproduct_mapping, final_process_mapping = read_data(
-    #     "2021 Biochem SOT via BDO_working.xlsm"
-    # )
-    # lci_data = {
-    #     key: value.to_json(orient="split", date_format="iso")
-    #     for key, value in lci_mapping.items()
-    # }
-    # overall_lci = generate_final_lci(
-    #     lci_mapping, coproduct_mapping, final_process_mapping
-    # )
-    # res_new = calc(overall_lci)
+    lci_new = None
+    # error_message = ""
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    # data_status = "OK"
-    # return res.to_json(date_format='iso', orient='split'), reset_status, update_status
-
     if contents or ("update-lci" in changed_id) or (changed_id == "coproduct-handling"):
         if contents:
             lci_new = parse_contents(contents, filename, date)
-            # df_new = pd.merge(lci_new, lookup, left_on='Input', right_index=True)
 
-            lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_new)
-
-            # dropdown_value = None
-
-            # updated_coproduct_mapping = coproduct_mapping.copy()
-            uploaded = True
-
-            # sheet_names = list(lci_mapping.keys())
-            # step_mapping = {sheet.lower(): format_input(df) for sheet, df in lci_mapping.items()}
-        else:
+            if not isinstance(lci_new, str):
+                lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_new)
+                uploaded = True
+        if ("update-lci" in changed_id) or (changed_id == "coproduct-handling") or isinstance(lci_new, str):
             data = json.loads(stored_data)
             uploaded = data["uploaded"]
             lci_data = data["lci"]
@@ -635,53 +572,17 @@ def update_results(
             final_process_mapping = data["final_process"]
 
             if "update-lci" in changed_id:
-                # sheet_names = list(lci_mapping.keys())
                 lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
                 dropdown_value = process_to_edit[0]
-                # dropdown_items = [
-                #     dbc.Row(
-                #         [
-                #             dbc.Col(html.H5(["Edit Life Cycle Inventory Data"])),
-                #             # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
-                #         ]
-                #     ),
-                #     # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
-                #     dbc.Row(
-                #         [
-                #             dbc.Col(
-                #                 dcc.Dropdown(
-                #                     list(lci_mapping.keys()),
-                #                     id={"type": "process_dropdown", "index": 0},
-                #                     value=dropdown_value,
-                #                 )
-                #             ),
-                #             dbc.Col(
-                #                 dbc.Button(
-                #                     "Update",
-                #                     color="success",
-                #                     className="mb-3",
-                #                     id={"type": "update-lci", "index": 0},
-                #                 ),
-                #                 width="auto",
-                #             ),
-                #         ]
-                #     ),
-                # ]
 
         if coproduct != "User Specification":
             updated_coproduct_mapping = {key: coproduct for key in coproduct_mapping}
         else:
             updated_coproduct_mapping = coproduct_mapping.copy()
 
-        # lci_data = {
-        #     key: value.to_json(orient="split", date_format="iso")
-        #     for key, value in lci_mapping.items()
-        # }
-        # res_new = calc(sheet_names, step_mapping)
-        # res_new = calc(lci_mapping, final_process_mapping)
         data_status = data_check(
-            lci_mapping, updated_coproduct_mapping, final_process_mapping
-        )
+                lci_mapping, updated_coproduct_mapping, final_process_mapping
+            )
         if data_status == "OK":
             overall_lci = generate_final_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping
@@ -692,17 +593,17 @@ def update_results(
             data = json.loads(stored_data)
             res_new = pd.read_json(data["pd"], orient="split")
             error_status = True
-
+        # if lci_new is not None:
+        if isinstance(lci_new, str):
+            data_status = lci_new
+            error_status = True
+            update_status = False
     else:
         if changed_id == "reset-button":
             reset_status = True
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             "2021 Biochem SOT via BDO_working.xlsm"
         )
-        # lci_data = {
-        #     key: value.to_json(orient="split", date_format="iso")
-        #     for key, value in lci_mapping.items()
-        # }
         overall_lci = generate_final_lci(
             lci_mapping, coproduct_mapping, final_process_mapping
         )
@@ -746,7 +647,6 @@ def update_results(
         ]
 
     data_to_return = {
-        # "status": data_status,
         "pd": res_new.to_json(date_format="iso", orient="split"),
         "lci": lci_data,
         "coproduct": coproduct_mapping,
@@ -791,12 +691,6 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         reset_status = data["r_status"]
         update_status = data["p_status"]
         error_status = data["e_status"]
-        # data_status = data["e_message"]
-        # error_message = [
-        #     "Please fix the following error in the LCI file: ",
-        #     html.Br(),
-        #     data_status,
-        # ]
         error_message = data["e_message"]
     else:
         reset_status = rs
@@ -804,8 +698,6 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         error_status = es
         error_message = em
 
-    # data_status = data["data_status"]
-    # if not error_status:
     res_new = pd.read_json(data["pd"], orient="split")
     res_new.loc[res_new["Resource"] == "Electricity", tab + "_Sum"] = res_new.loc[
         res_new["Resource"] == "Electricity", tab + "_Sum"
@@ -875,28 +767,33 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
         coproduct_mapping_sensitivity = {}
         final_process_sensitivity = {}
         lci_data_sensitivity = {}
+        file_error_sensitivity = {}
 
         for content, filename, date in zip(
             list_of_contents, list_of_names, list_of_dates
         ):
             lci_file = parse_contents(content, filename, date)
-            lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_file)
+            if not isinstance(lci_file, str):
+                lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_file)
 
-            coproduct_mapping_sensitivity.update({filename: coproduct_mapping})
-            final_process_sensitivity.update({filename: final_process_mapping})
+                coproduct_mapping_sensitivity.update({filename: coproduct_mapping})
+                final_process_sensitivity.update({filename: final_process_mapping})
 
-            lci_data = {
-                key: value.to_json(orient="split", date_format="iso")
-                for key, value in lci_mapping.items()
-            }
-            lci_data_sensitivity.update({filename: lci_data})
+                lci_data = {
+                    key: value.to_json(orient="split", date_format="iso")
+                    for key, value in lci_mapping.items()
+                }
+                lci_data_sensitivity.update({filename: lci_data})
+            else:
+                file_error_sensitivity.update({filename: lci_file})
 
         return (
             coproduct_mapping_sensitivity,
             final_process_sensitivity,
             lci_data_sensitivity,
+            file_error_sensitivity,    # Stores the uploaded files that are in a unsupported format
         )
-    return {}, {}, {}
+    return {}, {}, {}, {}
 
 
 @app.callback(
@@ -907,8 +804,6 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
     State("upload-data-sensitivity", "filename"),
     State("upload-data-sensitivity", "last_modified"),
     State("sensitivity-results", "data"),
-    # State("sensitivity_error_status", "is_open"),
-    # State("sensitivity_error_message", "children"),
 )
 def update_sensitivity_results(contents, coproduct, filenames, dates, stored_data):
     """
@@ -920,18 +815,17 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
     coproduct_mapping_sensitivity = {}
     final_process_sensitivity = {}
     lci_data_sensitivity = {}
+    file_error_sensitivity = {}
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
     if contents:
         (
-            # df,
-            # sensitivity_error_status,
-            # sensitivity_error_message,
             coproduct_mapping_sensitivity,
             final_process_sensitivity,
             lci_data_sensitivity,
+            file_error_sensitivity,
         ) = sensitivity_analysis(contents, filenames, dates)
 
     elif changed_id == "coproduct-handling-sensitivity":
@@ -939,6 +833,10 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
         lci_data_sensitivity = data["lci_data_sensitivity"]
         final_process_sensitivity = data["final_process_sensitivity"]
         coproduct_mapping_sensitivity = data["coproduct_mapping_sensitivity"]
+        file_error_sensitivity = data["file_error_sensitivity"]
+
+    for filename, message in file_error_sensitivity.items():
+            sensitivity_error_message.append(filename + ": " + message)
 
     for filename in lci_data_sensitivity.keys():
         lci_mapping = {
@@ -955,10 +853,8 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
 
         data_status = data_check(lci_mapping, coproduct_mapping, final_process_mapping)
         if data_status != "OK":
-            # if isinstance(res, str):
             if not sensitivity_error_status:
                 sensitivity_error_status = True
-            # sensitivity_error_message.extend([html.H6(filename + ": " + res)])
             sensitivity_error_message.append(filename + ": " + data_status)
         else:
             overall_lci = generate_final_lci(
@@ -969,13 +865,13 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
             df = pd.concat([df, lca_res], ignore_index=True)
 
     data_to_return = {
-        # "status": data_status,
         "pd": df.to_json(date_format="iso", orient="split"),
         "e_status": sensitivity_error_status,
         "e_message": sensitivity_error_message,
         "coproduct_mapping_sensitivity": coproduct_mapping_sensitivity,
         "final_process_sensitivity": final_process_sensitivity,
         "lci_data_sensitivity": lci_data_sensitivity,
+        "file_error_sensitivity": file_error_sensitivity,
     }
     return json.dumps(data_to_return), None
 
@@ -1009,7 +905,6 @@ def update_sensitivity_figures(json_data, tab, es, em):
 
     else:
         sensitivity_error_status = es
-        # sensitivity_error_message = em
         children = em
 
     df = pd.read_json(data["pd"], orient="split")
@@ -1029,13 +924,9 @@ def update_sensitivity_figures(json_data, tab, es, em):
         )
         fig1_sensitivity.update_xaxes(title="Cases")
         fig1_sensitivity.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
-        # children = []
-        # for message in sensitivity_error_message:
-        # children.extend([message, html.Br()])
         return (
             fig1_sensitivity,
             sensitivity_error_status,
-            # sensitivity_error_message,
             children,
         )
     else:

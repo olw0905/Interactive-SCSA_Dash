@@ -3,10 +3,6 @@
 # TODO: check the functional unit
 import pandas as pd
 
-# from lookup_table import lookup_table
-
-# , production_emissions
-
 lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
 category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
