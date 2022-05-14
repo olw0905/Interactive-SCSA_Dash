@@ -4,7 +4,7 @@
 import pandas as pd
 
 lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
-category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
+# category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
 metrics = [
     "Total energy, Btu",

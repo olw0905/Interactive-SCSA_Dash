@@ -1,7 +1,7 @@
 import pandas as pd
 from utils import process, format_input, calculate_lca, unit_conversion
 
-category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
+# category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
 
 def read_data(lci_file):
@@ -171,9 +171,9 @@ def allocation(df, basis="mass"):
     allocated = df[~not_allocated].copy()
 
     # allocated['Ratio'] = allocated
-    allocated["Amount"] = allocated["Amount"] * allocated["Product Train"].fillna("Both").map(
-        {"Both": ratio, "Co-product": 0, "Main product": 1}
-    ).fillna(ratio)
+    allocated["Amount"] = allocated["Amount"] * allocated["Product Train"].fillna(
+        "Both"
+    ).map({"Both": ratio, "Co-product": 0, "Main product": 1}).fillna(ratio)
 
     allocated = allocated[allocated["Amount"] != 0]
     allocated.loc[
