@@ -556,9 +556,15 @@ def update_results(
             lci_new = parse_contents(contents, filename, date)
 
             if not isinstance(lci_new, str):
-                lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_new)
+                lci_mapping, coproduct_mapping, final_process_mapping = read_data(
+                    lci_new
+                )
                 uploaded = True
-        if ("update-lci" in changed_id) or (changed_id == "coproduct-handling") or isinstance(lci_new, str):
+        if (
+            ("update-lci" in changed_id)
+            or (changed_id == "coproduct-handling")
+            or isinstance(lci_new, str)
+        ):
             data = json.loads(stored_data)
             uploaded = data["uploaded"]
             lci_data = data["lci"]
@@ -581,8 +587,8 @@ def update_results(
             updated_coproduct_mapping = coproduct_mapping.copy()
 
         data_status = data_check(
-                lci_mapping, updated_coproduct_mapping, final_process_mapping
-            )
+            lci_mapping, updated_coproduct_mapping, final_process_mapping
+        )
         if data_status == "OK":
             overall_lci = generate_final_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping
@@ -698,24 +704,46 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         error_status = es
         error_message = em
 
-    res_new = pd.read_json(data["pd"], orient="split")
-    res_new.loc[res_new["Resource"] == "Electricity", tab + "_Sum"] = res_new.loc[
-        res_new["Resource"] == "Electricity", tab + "_Sum"
-    ] * (1 - re)
+    res_new_with_incumbent = pd.read_json(data["pd"], orient="split")
+
+    res_new_with_incumbent.loc[
+        (res_new_with_incumbent["Resource"] == "Electricity")
+        & (~res_new_with_incumbent["Pathway"].str.contains("Incumbent"))
+        & (res_new_with_incumbent["Type"].str.contains("Input")),
+        tab + "_Sum",
+    ] = res_new_with_incumbent.loc[
+        res_new_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
+    ] * (
+        1 - re
+    )
+
+    res_new = res_new_with_incumbent[
+        ~res_new_with_incumbent["Pathway"].str.contains("Incumbent")
+    ]
+
     fig1_new = px.bar(
+        res_new_with_incumbent, x="Pathway", y=tab + "_Sum", color="Process"
+    )
+    fig1_new.update_layout(
+        barmode="relative", title="Breakdown of " + tab + " Emissions"
+    )
+    fig1_new.update_traces(marker_line_width=0)
+    fig1_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+
+    fig2_new = px.bar(
         res_new,
         x="Process",
         y=tab + "_Sum",
         color="Category",
         custom_data=["Category"],
     )
-    fig1_new.update_layout(barmode="relative")
-    fig1_new.update_traces(marker_line_width=0)
-    fig1_new.update_layout(title="Breakdown of " + tab + " Emissions by Process")
-    fig1_new.update_xaxes(title="Process")
-    fig1_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+    fig2_new.update_layout(barmode="relative")
+    fig2_new.update_traces(marker_line_width=0)
+    fig2_new.update_layout(title="Breakdown of " + tab + " Emissions by Process")
+    fig2_new.update_xaxes(title="Process")
+    fig2_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
 
-    fig2_new = make_waterfall_plot(res_new, tab)
+    fig3_new = make_waterfall_plot(res_new, tab)
     # fig2_new = px.bar(
     #     res_new,
     #     x="Resource",
@@ -723,14 +751,14 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     #     color="Process",
     #     custom_data=["Process"],
     # )
-    fig2_new.update_layout(title="Waterfall Chart of " + tab + " Emissions by Inputs")
+    fig3_new.update_layout(title="Waterfall Chart of " + tab + " Emissions by Inputs")
     # fig2_new.update_xaxes(title='Process')
-    fig2_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+    fig3_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
 
-    fig3_new = px.pie(res_new, values=tab + "_Sum", names="Category")
-    fig3_new.update_layout(title="% Contribution to " + tab + " Emissions")
-    # fig3_new.update_xaxes(title='Process')
-    # fig3_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
+    # fig3_new = px.pie(res_new, values=tab + "_Sum", names="Category")
+    # fig3_new.update_layout(title="% Contribution to " + tab + " Emissions")
+    # # fig3_new.update_xaxes(title='Process')
+    # # fig3_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
     fig4_new = px.treemap(
         res_new,
@@ -774,7 +802,9 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
         ):
             lci_file = parse_contents(content, filename, date)
             if not isinstance(lci_file, str):
-                lci_mapping, coproduct_mapping, final_process_mapping = read_data(lci_file)
+                lci_mapping, coproduct_mapping, final_process_mapping = read_data(
+                    lci_file
+                )
 
                 coproduct_mapping_sensitivity.update({filename: coproduct_mapping})
                 final_process_sensitivity.update({filename: final_process_mapping})
@@ -791,7 +821,7 @@ def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
             coproduct_mapping_sensitivity,
             final_process_sensitivity,
             lci_data_sensitivity,
-            file_error_sensitivity,    # Stores the uploaded files that are in a unsupported format
+            file_error_sensitivity,  # Stores the uploaded files that are in a unsupported format
         )
     return {}, {}, {}, {}
 
@@ -836,7 +866,7 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
         file_error_sensitivity = data["file_error_sensitivity"]
 
     for filename, message in file_error_sensitivity.items():
-            sensitivity_error_message.append(filename + ": " + message)
+        sensitivity_error_message.append(filename + ": " + message)
 
     for filename in lci_data_sensitivity.keys():
         lci_mapping = {
@@ -860,7 +890,7 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
             overall_lci = generate_final_lci(
                 lci_mapping, coproduct_mapping, final_process_mapping
             )
-            lca_res = calc(overall_lci)
+            lca_res = calc(overall_lci, False)
             lca_res["FileName"] = filename.rsplit(".", 1)[0]
             df = pd.concat([df, lca_res], ignore_index=True)
 

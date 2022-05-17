@@ -42,7 +42,7 @@ primary_units = {
     "Electricity": "mmBTU",
     "Chemicals and catalysts": "g",
     "Water": "gal",
-    "Transportation": "mmBTU",    # For transportation, diesel is used
+    "Transportation": "mmBTU",  # For transportation, diesel is used
 }
 
 units = pd.read_excel(
@@ -255,7 +255,7 @@ def emission_factor(ser):
                 )
             )
             # if pd.isnull(ser["End Use"]):
-            if ser['End Use'] == "":
+            if ser["End Use"] == "":
                 return incumbent_emission
             else:
                 return incumbent_emission.sub(
@@ -359,8 +359,6 @@ def convert_transport_lci(df):
     return pd.concat(to_append)
 
 
-#
-#
 def step_processing(step_map, step_name):
     """
     Processing each step that have inputs that are ouputs from another step, convert these inputs.
@@ -446,9 +444,9 @@ def format_input(dff):
     df = dff.copy()  # Avoid chaning the original df
 
     # Step 1
-    df['End Use'] = df['End Use'].fillna('')
-    df['Incumbent Resource'] = df['Incumbent Resource'].fillna('')
-    df['Incumbent End Use'] = df['Incumbent End Use'].fillna('')
+    df["End Use"] = df["End Use"].fillna("")
+    df["Incumbent Resource"] = df["Incumbent Resource"].fillna("")
+    df["Incumbent End Use"] = df["Incumbent End Use"].fillna("")
 
     lower_case_cols = [
         "Resource",
@@ -503,17 +501,53 @@ def format_input(dff):
     return df
 
 
-def calculate_lca(df_lci):
+def calculate_lca(df_lci, include_incumbent=True):
     """
     Calculate LCA results from LCI
 
     Parameters:
         df_lci: LCI table
+        include_incumbent: whether to include the incumbent resource in the result dataframe.
     """
 
     # df_lci["ID"] = df_lci["ID"].str.lower()
     # res = pd.merge(df_lci, lookup_table, left_on="ID", right_index=True, how="left")
     # res["Primary Unit"] = res["Primary Unit"].str.lower()
+
+    if include_incumbent:
+        # Separate out the incumbent resource that the main product is compared with
+        incumbent_resource = (
+            df_lci.loc[df_lci["Type"] == "Main Product", "Incumbent Resource"]
+            # .fillna("")
+            .values[0]
+        )
+        incumbent_end_use = (
+            df_lci.loc[df_lci["Type"] == "Main Product", "Incumbent End Use"]
+            # .fillna("")
+            .values[0]
+        )
+        incumbent_category = df_lci.loc[
+            df_lci["Type"] == "Main Product", "Category"
+        ].values[0]
+
+        main_product = df_lci.loc[df_lci["Type"] == "Main Product", "Resource"].values[
+            0
+        ]
+        df_lci["Pathway"] = main_product + " (Modeled)"
+
+        df_incumbent = pd.DataFrame(
+            {
+                "Pathway": [incumbent_resource + " (Incumbent)"],
+                "Type": ["Input"],
+                "Category": [incumbent_category],
+                "Resource": [incumbent_resource],
+                "Process": [incumbent_resource + " (Incumbent)"],
+                "End Use": [incumbent_end_use],
+                "Amount": [1],
+                "Unit": [primary_units[incumbent_category]],
+            }
+        )
+        df_lci = pd.concat([df_lci, df_incumbent])
 
     df_emission_factor = df_lci.apply(emission_factor, axis=1)
     res = pd.concat([df_lci, df_emission_factor], axis=1)
@@ -541,7 +575,7 @@ def calculate_lca(df_lci):
     res["Amount"] = (
         res["Amount"] / res.loc[res["Type"] == "Main Product", "Amount"].sum()
     )
-    res = res[res["Type"] != "Main Product"]
+    # res = res[res["Type"] != "Main Product"]
 
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
