@@ -31,48 +31,48 @@ metrics = [
 
 combination_basis = {  # The basis for combinaning multiple "main products"
     "Biomass": "kg",
-    "Fuel": "mmbtu",
-    "Electricity": "mmbtu",
+    "Fuel": "mmBTU",
+    "Electricity": "mmBTU",
     "Chemicals and catalysts": "kg",
 }
 
 primary_units = {
-    "Fuel": "mmBtu",
+    "Fuel": "mmBTU",
     "Biomass": "ton",
-    "Electricity": "mmBtu",
+    "Electricity": "mmBTU",
     "Chemicals and catalysts": "g",
     "Water": "gal",
-    "Transportation": "mmBtu",    # For transportation, diesel is used
+    "Transportation": "mmBTU",    # For transportation, diesel is used
 }
 
 units = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Units", header=0, index_col=0
 ).squeeze("columns")
-units.index = units.index.str.lower()
+# units.index = units.index.str.lower()
 
 mass = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Mass", header=0, index_col=0
 )
-mass.columns = mass.columns.str.lower()
-mass.index = mass.index.str.lower()
+# mass.columns = mass.columns.str.lower()
+# mass.index = mass.index.str.lower()
 
 volume = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Volume", header=0, index_col=0
 )
-volume.columns = volume.columns.str.lower()
-volume.index = volume.index.str.lower()
+# volume.columns = volume.columns.str.lower()
+# volume.index = volume.index.str.lower()
 
 energy = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Energy", header=0, index_col=0
 )
-energy.columns = energy.columns.str.lower()
-energy.index = energy.index.str.lower()
+# energy.columns = energy.columns.str.lower()
+# energy.index = energy.index.str.lower()
 
 length = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Length", header=0, index_col=0
 )
-length.columns = length.columns.str.lower()
-length.index = length.index.str.lower()
+# length.columns = length.columns.str.lower()
+# length.index = length.index.str.lower()
 
 mass_units = mass.columns.to_list()
 volume_units = volume.columns.to_list()
@@ -112,7 +112,7 @@ def energy_to_mass(ene, input_unit, lhv):
     """
     Convert energy to kg
     """
-    return ene * energy.loc["mj", input_unit] / lhv
+    return ene * energy.loc["MJ", input_unit] / lhv
 
 
 def unit_conversion(series):
@@ -136,10 +136,10 @@ def unit_conversion(series):
             ):  # Input unit is volume and output unit is mass
                 return kg_amount * mass.loc[output_unit, "kg"]
             else:  # Input unit is volume and output unit is energy
-                return kg_amount * lhv * energy.loc[output_unit, "mj"]
+                return kg_amount * lhv * energy.loc[output_unit, "MJ"]
         elif output_unit in energy_units:  # output is energy and input is mass
             return (
-                mass_to_energy(amount, input_unit, lhv) * energy.loc[output_unit, "mj"]
+                mass_to_energy(amount, input_unit, lhv) * energy.loc[output_unit, "MJ"]
             )
         else:  # output is mass and input is energy
             return energy_to_mass(amount, input_unit, lhv) * mass.loc[output_unit, "kg"]
@@ -350,7 +350,7 @@ def convert_transport_lci(df):
                     to_desti_fuel * transport_amount,
                     to_origin_fuel * transport_amount,
                 ],
-                "Unit": ["mmbtu"] * 2,
+                "Unit": ["mmBTU"] * 2,
             }
         )
 
@@ -455,7 +455,7 @@ def format_input(dff):
         "End Use",
         "Incumbent Resource",
         "Incumbent End Use",
-        "Unit",
+        # "Unit",
     ]
 
     for col in lower_case_cols:
@@ -517,9 +517,10 @@ def calculate_lca(df_lci):
 
     df_emission_factor = df_lci.apply(emission_factor, axis=1)
     res = pd.concat([df_lci, df_emission_factor], axis=1)
-    res["Primary Unit"] = res["Category"].map(primary_units).str.lower()
+    # res["Primary Unit"] = res["Category"].map(primary_units).str.lower()
+    res["Primary Unit"] = res["Category"].map(primary_units)
 
-    res["Unit"] = res["Unit"].str.lower()
+    # res["Unit"] = res["Unit"].str.lower()
     res["Resource"] = res["Resource"].str.lower()
 
     res["CO2 (w/ C in VOC & CO)"] = (

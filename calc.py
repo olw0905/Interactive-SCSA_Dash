@@ -147,7 +147,7 @@ def allocation(df, basis="mass"):
     if basis == "mass":
         products["Primary Unit"] = "kg"
     elif basis == "energy":
-        products["Primary Unit"] = "mmbtu"
+        products["Primary Unit"] = "mmBTU"
     else:
         ###################### Implement market-value-based allocation here ###########################
         pass
