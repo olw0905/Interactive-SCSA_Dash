@@ -3,7 +3,7 @@
 # TODO: check the functional unit
 import pandas as pd
 
-lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
+# lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
 # category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
 metrics = [
@@ -34,6 +34,15 @@ combination_basis = {  # The basis for combinaning multiple "main products"
     "Fuel": "mmbtu",
     "Electricity": "mmbtu",
     "Chemicals and catalysts": "kg",
+}
+
+primary_units = {
+    "Fuel": "mmBtu",
+    "Biomass": "ton",
+    "Electricity": "mmBtu",
+    "Chemicals and catalysts": "g",
+    "Water": "gal",
+    "Transportation": "mmBtu",    # For transportation, diesel is used
 }
 
 units = pd.read_excel(
@@ -140,6 +149,126 @@ def unit_conversion(series):
         return amount * energy.loc[output_unit, input_unit]
     else:  # Both input and output are volume unit.
         return amount * volume.loc[output_unit, input_unit]
+
+
+# Process emission factors read from the data extraction file
+production_emissions = pd.read_excel(
+    "Lookup table_prototyping.xlsx",
+    sheet_name="Production",
+    index_col=0,
+    skipfooter=2,
+)
+production_emissions = production_emissions.dropna()
+production_emissions.loc["Biogenic CO2"] = 0
+production_emissions.index = production_emissions.index.str.strip()
+production_emissions = production_emissions.drop(["Category", "Primary Unit"])
+
+chemicals_emissions = pd.read_excel(
+    "Lookup table_prototyping.xlsx",
+    sheet_name="Chemicals",
+    index_col=0,
+    skipfooter=2,
+)
+chemicals_emissions = chemicals_emissions.dropna()
+chemicals_emissions.loc["Biogenic CO2"] = 0
+chemicals_emissions.index = chemicals_emissions.index.str.strip()
+chemicals_emissions = chemicals_emissions.drop(["Category", "Primary Unit"])
+
+feedstock_emissions = pd.read_excel(
+    "Lookup table_prototyping.xlsx", sheet_name="Feedstock", index_col=0, skipfooter=2
+)
+feedstock_emissions = feedstock_emissions.dropna()
+feedstock_emissions.loc["Biogenic CO2"] = 0
+feedstock_emissions.index = feedstock_emissions.index.str.strip()
+feedstock_emissions = feedstock_emissions.drop(["Category", "Primary Unit"])
+
+combined_ci_table = pd.concat(
+    [production_emissions, chemicals_emissions, feedstock_emissions], axis=1
+)
+combined_ci_table.columns = combined_ci_table.columns.str.lower()
+
+end_use = pd.read_excel(
+    "Lookup table_prototyping.xlsx",
+    sheet_name="End use test",
+    index_col=0,
+    header=[0, 1],
+    skipfooter=2,
+)
+end_use = end_use.drop("Primary Unit").fillna(0)
+end_use.columns = end_use.columns.set_levels(
+    [end_use.columns.levels[0].str.lower(), end_use.columns.levels[1].str.lower()]
+)
+
+
+def emission_factor(ser):
+    """
+    Calculate the emission factor for each entry
+
+    Parameter:
+        ser: a series (entry) in the overall LCI dataframe
+    """
+
+    zero_emissions = pd.Series(
+        0, index=combined_ci_table.index
+    )  # Create a Series for zero emissions
+
+    if (
+        "Input" in ser["Type"]
+    ):  # For inputs, both production and end use emissions should be included
+        if ser["Resource"] == "electricity":
+            # if pd.isnull(ser["End Use"]):
+            if ser["End Use"] == "":
+                return combined_ci_table[
+                    "electricity_u.s. mix"
+                ]  # If not generation mix is not specified, use national average
+            else:
+                return combined_ci_table[ser["Resource"] + "_" + ser["End Use"]]
+        # elif pd.isnull(ser["End Use"]):
+        elif ser["End Use"] == "":
+            return combined_ci_table[ser["Resource"]]
+        else:
+            return combined_ci_table[ser["Resource"]].add(
+                end_use[ser["Resource"], ser["End Use"]], fill_value=0
+            )
+
+    elif (
+        "Co-product" in ser["Type"]
+    ):  # For co-products, the difference between end use emissions for the product and incumbent should be accounted for
+        if ser["Incumbent Resource"] == "electricity":
+            # if pd.isnull(ser["End Use"]):
+            if ser["End Use"] == "":
+                return combined_ci_table[
+                    "electricity_u.s. mix"
+                ]  # If not generation mix is not specified, use national average
+            else:
+                return combined_ci_table[
+                    ser["Incumbent Resource"] + "_" + ser["Incumbent End Use"]
+                ]
+        else:
+            incumbent_emission = (
+                combined_ci_table[ser["Incumbent Resource"]]
+                # if pd.isnull(ser["Incumbent End Use"])
+                if ser["Incumbent End Use"] == ""
+                else combined_ci_table[ser["Incumbent Resource"]].add(
+                    end_use[ser["Incumbent Resource"], ser["Incumbent End Use"]],
+                    fill_value=0,
+                )
+            )
+            # if pd.isnull(ser["End Use"]):
+            if ser['End Use'] == "":
+                return incumbent_emission
+            else:
+                return incumbent_emission.sub(
+                    end_use[ser["Resource"], ser["End Use"]], fill_value=0
+                )
+    else:  # Main product
+        # if pd.isnull(ser["End Use"]):
+        if ser["End Use"] == "":
+            return zero_emissions
+        else:
+            return zero_emissions.add(
+                end_use[ser["Resource"], ser["End Use"]], fill_value=0
+            )
 
 
 def convert_transport_lci(df):
@@ -317,7 +446,17 @@ def format_input(dff):
     df = dff.copy()  # Avoid chaning the original df
 
     # Step 1
-    lower_case_cols = ["Resource", "End Use", "Unit"]
+    df['End Use'] = df['End Use'].fillna('')
+    df['Incumbent Resource'] = df['Incumbent Resource'].fillna('')
+    df['Incumbent End Use'] = df['Incumbent End Use'].fillna('')
+
+    lower_case_cols = [
+        "Resource",
+        "End Use",
+        "Incumbent Resource",
+        "Incumbent End Use",
+        "Unit",
+    ]
 
     for col in lower_case_cols:
         df[col] = df[col].str.strip().str.lower()
@@ -371,10 +510,15 @@ def calculate_lca(df_lci):
     Parameters:
         df_lci: LCI table
     """
-    # lookup_table.index = lookup_table.index.str.lower()
-    df_lci["ID"] = df_lci["ID"].str.lower()
-    res = pd.merge(df_lci, lookup_table, left_on="ID", right_index=True, how="left")
-    res["Primary Unit"] = res["Primary Unit"].str.lower()
+
+    # df_lci["ID"] = df_lci["ID"].str.lower()
+    # res = pd.merge(df_lci, lookup_table, left_on="ID", right_index=True, how="left")
+    # res["Primary Unit"] = res["Primary Unit"].str.lower()
+
+    df_emission_factor = df_lci.apply(emission_factor, axis=1)
+    res = pd.concat([df_lci, df_emission_factor], axis=1)
+    res["Primary Unit"] = res["Category"].map(primary_units).str.lower()
+
     res["Unit"] = res["Unit"].str.lower()
     res["Resource"] = res["Resource"].str.lower()
 

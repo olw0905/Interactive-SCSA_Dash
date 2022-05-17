@@ -254,18 +254,18 @@ def calc(overall_lci):
     basis: the basis for allocation methods. Must be one of the following: "mass", "energy", or "value".
     """
 
-    overall_lci["End Use"] = overall_lci["End Use"].fillna("")
-    overall_lci["ID"] = overall_lci.apply(
-        # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
-        # lambda a: a['Resource'] if pd.isna(a['End Use']) else a['Resource']+'_'+a['End Use'], axis=1
-        lambda a: a["Resource"]
-        if a["End Use"] == ""
-        else a["Resource"] + "_" + a["End Use"],
-        axis=1,
-    )
-    # overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] = (
-    #     overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] * -1
+    # overall_lci["End Use"] = overall_lci["End Use"].fillna("")
+    # overall_lci["ID"] = overall_lci.apply(
+    #     # lambda a: a['Resource'] if (pd.isna(a['End Use']))|(a['Resource'] == 'Electricity') else a['Resource']+'_'+a['End Use'], axis=1
+    #     # lambda a: a['Resource'] if pd.isna(a['End Use']) else a['Resource']+'_'+a['End Use'], axis=1
+    #     lambda a: a["Resource"]
+    #     if a["End Use"] == ""
+    #     else a["Resource"] + "_" + a["End Use"],
+    #     axis=1,
     # )
+    # # overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] = (
+    # #     overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] * -1
+    # # )
 
     res = calculate_lca(overall_lci)
     # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
