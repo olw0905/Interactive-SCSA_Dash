@@ -141,7 +141,11 @@ def allocation(df, basis="mass"):
         df: the original LCI dataframe that contains inputs and outputs
         basis: the basis for process-level allocation. Must be one of the following: "mass", "energy", or "value".
     """
-    products = df[df["Type"].isin(["Main Product", "Co-product"])].copy()
+    product_flag = (df["Type"] == "Main Product") | (
+        (df["Type"] == "Co-product")
+        & (df["Always Use Displacement Method for Co-Product?"] == "No")
+    )  # Select the products that should be accounted for when calculating allocation ratios
+    products = df[product_flag].copy()
     products = products.rename(columns={"Amount": "Input Amount"})
 
     if basis == "mass":
@@ -234,6 +238,96 @@ def generate_final_lci(lci_mapping, coproduct_mapping, final_process_mapping):
         if process_bool == "Yes":
             final_process = sheet
             break
+
+    overall_lci = lcis[final_process]
+    # return overall_lci, lcis, system_allocation, system_allocation_basis
+    if system_allocation:
+        overall_lci["Product Train"] = "Both"
+        overall_lci = allocation(overall_lci, system_allocation_basis)
+
+    return overall_lci
+
+
+def generate_coproduct_lci(lci_mapping, coproduct_mapping, final_process_mapping):
+    """
+    Generatethe final LCI file used for LCA calculation for the coproduct
+
+    Parameters:
+        lci_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
+        coproduct_mapping: a dictionary of co-product handling method. The values can be one of the following:
+            Displacement Method, Process Level Mass-Based Allocation, Process Level Energy-Based Allocation, Process Level Value-Based Allocation,
+            System Level Mass-Based Allocation, system Level-Based Energy Allocation, System Level Value-Based Allocation.
+    Return:
+        lci_mapping_processed: the LCI data after applying the co-product handling method
+    """
+    system_allocation = (
+        False  # A flag indicating whether system-level allocation is used
+    )
+    system_allocation_basis = "mass"  # The basis used for system-level allocation
+
+    # Locate the last process
+    for sheet, process_bool in final_process_mapping.items():
+        if process_bool == "Yes":
+            final_process = sheet
+            break
+
+    if "Displacement" in coproduct_mapping[final_process]:
+        return None
+    else:
+        df = lci_mapping[final_process].copy()
+        if (
+            len(
+                df.loc[
+                    (df["Type"] == "Co-product")
+                    & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+                ]
+            )
+            == 0
+        ):  # There is no co-product to analyze
+            return None
+        df.loc[
+            (df["Type"] == "Co-product")
+            & (df["Always Use Displacement Method for Co-Product?"] != "Yes"),
+            "Type",
+        ] = "Main"
+        df.loc[
+            df["Type"] == "Main Product",
+            "Always Use Displacement Method for Co-Product?",
+        ] = "No"
+        df.loc[df["Type"] == "Main Product", "Type"] = "Co-product"
+        df.loc[df["Type"] == "Main", "Type"] = "Main Product"
+
+        df["Product Train"] = df["Product Train"].map(
+            {"Both": "Both", "Co-product": "Main product", "Main product": "Co-product"}
+        )
+
+        lci_mapping.update({final_process: df})
+        # return lci_mapping
+
+    step_mapping = {}
+    for sheet in lci_mapping:
+        df = format_input(lci_mapping[sheet])
+        if "Process" in coproduct_mapping[sheet]:
+            if "Mass" in coproduct_mapping[sheet]:
+                step_mapping.update({sheet: allocation(df, "mass")})
+            elif "Energy" in coproduct_mapping[sheet]:
+                step_mapping.update({sheet: allocation(df, "energy")})
+            else:
+                step_mapping.update({sheet: allocation(df, "value")})
+        elif "Displacement" in coproduct_mapping[sheet]:
+            df.loc[df["Type"] == "Co-product", "Amount"] = -df.loc[
+                df["Type"] == "Co-product", "Amount"
+            ]
+            step_mapping.update({sheet: df})
+        else:  # System-level allocation, no processing needed at this stage
+            step_mapping.update({sheet: df})
+            system_allocation = True
+            if "Energy" in coproduct_mapping[sheet]:
+                system_allocation_basis = "energy"
+            elif "Value" in coproduct_mapping[sheet]:
+                system_allocation_basis = "value"
+
+    lcis = process(step_mapping)
 
     overall_lci = lcis[final_process]
     # return overall_lci, lcis, system_allocation, system_allocation_basis

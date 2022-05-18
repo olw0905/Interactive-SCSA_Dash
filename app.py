@@ -12,7 +12,15 @@ from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import pandas as pd
 import json
-from calc import read_data, calc, generate_final_lci, data_check
+from calc import (
+    generate_coproduct_lci,
+    read_data,
+    calc,
+    generate_final_lci,
+    generate_coproduct_lci,
+    data_check,
+)
+from utils import display_units
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.BOOTSTRAP])
@@ -165,7 +173,7 @@ single_file_content = [
                         ),
                         dbc.CardBody(
                             [
-                                html.H4("", className="card-title", id="summary"),
+                                html.P(className="card-title", id="summary"),
                             ]
                         ),
                     ],
@@ -546,6 +554,7 @@ def update_results(
     dropdown_value = None
     uploaded = False  # Whether a new LCI file has been uploaded
     lci_new = None
+    coproduct_res = pd.DataFrame()
     # error_message = ""
 
     ctx = dash.callback_context
@@ -595,9 +604,15 @@ def update_results(
             )
             res_new = calc(overall_lci)
             update_status = True
+            coproduct_lci = generate_coproduct_lci(
+                lci_mapping, updated_coproduct_mapping, final_process_mapping
+            )
+            if coproduct_lci is not None:
+                coproduct_res = calc(coproduct_lci)
         else:
             data = json.loads(stored_data)
             res_new = pd.read_json(data["pd"], orient="split")
+            coproduct_res = pd.read_json(data["coproduct_res"], orient="split")
             error_status = True
         # if lci_new is not None:
         if isinstance(lci_new, str):
@@ -614,6 +629,11 @@ def update_results(
             lci_mapping, coproduct_mapping, final_process_mapping
         )
         res_new = calc(overall_lci)
+        coproduct_lci = generate_coproduct_lci(
+            lci_mapping, coproduct_mapping, final_process_mapping
+        )
+        if coproduct_lci is not None:
+            coproduct_res = calc(coproduct_lci)
 
     lci_data = {
         key: value.to_json(orient="split", date_format="iso")
@@ -654,6 +674,7 @@ def update_results(
 
     data_to_return = {
         "pd": res_new.to_json(date_format="iso", orient="split"),
+        "coproduct_res": coproduct_res.to_json(date_format="iso", orient="split"),
         "lci": lci_data,
         "coproduct": coproduct_mapping,
         "final_process": final_process_mapping,
@@ -705,6 +726,7 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         error_message = em
 
     res_new_with_incumbent = pd.read_json(data["pd"], orient="split")
+    coproduct_with_incumbent = pd.read_json(data["coproduct_res"], orient="split")
 
     res_new_with_incumbent.loc[
         (res_new_with_incumbent["Resource"] == "Electricity")
@@ -716,9 +738,22 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     ] * (
         1 - re
     )
+    coproduct_with_incumbent.loc[
+        (coproduct_with_incumbent["Resource"] == "Electricity")
+        & (~coproduct_with_incumbent["Pathway"].str.contains("Incumbent"))
+        & (coproduct_with_incumbent["Type"].str.contains("Input")),
+        tab + "_Sum",
+    ] = coproduct_with_incumbent.loc[
+        coproduct_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
+    ] * (
+        1 - re
+    )
 
     res_new = res_new_with_incumbent[
         ~res_new_with_incumbent["Pathway"].str.contains("Incumbent")
+    ]
+    coproduct_res = coproduct_with_incumbent[
+        ~coproduct_with_incumbent["Pathway"].str.contains("Incumbent")
     ]
 
     fig1_new = px.bar(
@@ -770,8 +805,54 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     # fig4_new.update_xaxes(title='Process')
     # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
-    total = res_new[tab + "_Sum"].sum()
-    summary = f"Life-Cycle {tab} Emissions: {total:.1f} g/MJ"
+    main_product_total = res_new[tab + "_Sum"].sum()
+    main_product_category = res_new.loc[
+        res_new["Type"] == "Main Product", "Category"
+    ].values[0]
+    main_product_target_unit = display_units[main_product_category]
+
+    main_incumbent_total = res_new_with_incumbent.loc[
+        res_new_with_incumbent["Pathway"].str.contains("Incumbent"),
+        tab + "_Sum",
+    ].sum()
+
+    main_diff = 1 - main_product_total / main_incumbent_total
+    main_change = "increase" if main_diff <= 0 else "reduction"
+    main_diff = abs(main_diff)
+    main_incumbent_resource = res_new_with_incumbent.loc[
+        res_new_with_incumbent["Pathway"].str.contains("Incumbent"), "Resource"
+    ].values[0]
+
+    summary = [
+        html.H4(
+            f"Life-Cycle {tab} Emissions of Main Product: {main_product_total:.1f} g/{main_product_target_unit} ({main_diff:.0%} {main_change} compared to conventional {main_incumbent_resource})"
+        )
+    ]
+    if len(coproduct_res) > 0:
+        print(coproduct_res)
+        coproduct_total = coproduct_res[tab + "_Sum"].sum()
+        coproduct_category = coproduct_res.loc[
+            coproduct_res["Type"] == "Main Product", "Category"
+        ].values[0]
+        coproduct_target_unit = display_units[coproduct_category]
+
+        coproduct_incumbent_total = res_new_with_incumbent.loc[
+            res_new_with_incumbent["Pathway"].str.contains("Incumbent"),
+            tab + "_Sum",
+        ].sum()
+
+        coproduct_diff = 1 - coproduct_total / coproduct_incumbent_total
+        coproduct_change = "increase" if coproduct_diff <= 0 else "reduction"
+        coproduct_diff = abs(coproduct_diff)
+        coproduct_incumbent_resource = coproduct_with_incumbent.loc[
+            coproduct_with_incumbent["Pathway"].str.contains("Incumbent"), "Resource"
+        ].values[0]
+
+        summary = summary + [
+            html.H4(
+                f"\nLife-Cycle {tab} Emissions of Co-Product: {coproduct_total:.1f} g/{coproduct_target_unit}  ({coproduct_diff:.0%} {coproduct_change} compared to conventional {coproduct_incumbent_resource})"
+            )
+        ]
 
     return (
         fig1_new,

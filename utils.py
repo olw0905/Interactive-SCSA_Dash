@@ -1,6 +1,7 @@
 # TODO: check upper or lower cases for unit, input, etc.  Decision: keep using lower case and change the case before visualization.
 # TODO: use end_use_dict
 # TODO: check the functional unit
+from json.tool import main
 import pandas as pd
 
 # lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
@@ -43,7 +44,15 @@ primary_units = {
     "Chemicals and catalysts": "g",
     "Water": "gal",
     "Transportation": "mmBTU",  # For transportation, diesel is used
-}
+}  # The functional unit for calculation
+
+display_units = {
+    "Fuel": "MJ",  # gram, gal, or BTU per MJ
+    "Biomass": "ton",  # gram, gal, or BTU per ton
+    "Electricity": "MJ",  # gram, gal, or BTU per MJ
+    "Chemicals and catalysts": "g",  # gram, gal, or BTU per g
+    # "Water": "gal",
+}  # The units for the final results
 
 units = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Units", header=0, index_col=0
@@ -447,6 +456,9 @@ def format_input(dff):
     df["End Use"] = df["End Use"].fillna("")
     df["Incumbent Resource"] = df["Incumbent Resource"].fillna("")
     df["Incumbent End Use"] = df["Incumbent End Use"].fillna("")
+    df["Always Use Displacement Method for Co-Product?"] = df[
+        "Always Use Displacement Method for Co-Product?"
+    ].fillna("No")
 
     lower_case_cols = [
         "Resource",
@@ -576,96 +588,14 @@ def calculate_lca(df_lci, include_incumbent=True):
         res["Amount"] / res.loc[res["Type"] == "Main Product", "Amount"].sum()
     )
     # res = res[res["Type"] != "Main Product"]
+    main_product_category = res.loc[res["Type"] == "Main Product", "Category"].values[0]
+    calculation_unit = primary_units[main_product_category]
+    target_unit = display_units[main_product_category]
 
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
         res[metric + "_Sum"] = (
-            res[metric + "_Sum"] / 1055.055853
-        )  # Convert the functional unit from mmBtu to MJ
+            res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
+        )  # Convert the functional unit from calculation unit to target unit
 
     return res
-
-
-# def generate_feedstock_lci(
-#     lci, end_uses, to_concat=pd.DataFrame(), process_name="Feedstock Harvest"
-# ):
-#     """
-#     Generate the formatted harvest LCI dataframe from the input.
-#     Parameter:
-#         harvest: the dataframe containing the input harvest LCI data.
-#         end_uses: a dictionary indicating the end uses of the fuels.
-#         to_concat: a dataframe containing the feedstock (main input) and main output of the process.
-#     """
-#     for fuel in ["Diesel", "Electricity", "Natural Gas"]:
-#         lci[fuel] = lci["Energy Consump (mBtu/dry ton)"] * lci[fuel + " %"]
-#     df = pd.melt(
-#         lci,
-#         value_vars=["Diesel", "Electricity", "Natural Gas"],
-#         value_name="Amount",
-#         var_name="Resource",
-#         ignore_index=False,
-#     ).reset_index()
-#     df["Amount"] = df["Amount"] * 1000  # Convert mBtu to Btu
-#     df["Unit"] = "Btu"
-#     df["End Use"] = df["Resource"].map(end_uses)
-#     # df['Category'] = ''
-#     df["Category"] = df["Resource"].str.lower().map(category)
-#     df["Process"] = process_name
-#     df["Type"] = "Input"
-#
-#     df = pd.concat([df, to_concat], ignore_index=True)
-#
-#     return df
-#
-#
-# fuel_economy = pd.read_excel(
-#     "Lookup table_prototyping.xlsx",
-#     sheet_name="Transportation",
-#     skipfooter=34,
-#     index_col=0,
-# ).dropna(axis=1, how="all")
-# fuel_economy = fuel_economy[["Heavy Heavy-Duty Truck"]]
-#
-#
-# def generate_transport_lci(
-#     transport, to_concat=pd.DataFrame(), process="Feedstock transport"
-# ):
-#     to_append = []
-#     for index, row in transport.iterrows():
-#         resource = "Corn Stover_1 leg" if "#1" in index else "Corn Stover_2 leg"
-#         unit = "mile"  # Assuming transport is a series, i.e., there is only one row for transportation
-#         distance = row.at["Distance (mi)"]
-#         payload = row.at["Payload (wet tons)"] * (1 - row.at["MC"])
-#         btu_per_ton_mile = fuel_economy / payload
-#
-#         to_desti_fuel = (
-#             btu_per_ton_mile.at[
-#                 "Trip from Product Origin to Destination", "Heavy Heavy-Duty Truck"
-#             ]
-#             * distance
-#             / 1000000
-#         )  # MMBtu per ton
-#         to_origin_fuel = (
-#             btu_per_ton_mile.at[
-#                 "Trip from Product Destination Back to Origin", "Heavy Heavy-Duty Truck"
-#             ]
-#             * distance
-#             / 1000000
-#         )  # MMBtu per ton
-#         df_trans = pd.DataFrame(
-#             {
-#                 "Type": ["Input"] * 2,
-#                 "Process": [process] * 2,
-#                 "Category": ["Transportation"] * 2,
-#                 "Resource": ["diesel"] * 2,
-#                 "End Use": ["loaded", "empty"],
-#                 "Amount": [to_desti_fuel, to_origin_fuel],
-#                 "Unit": ["mmbtu"] * 2,
-#             }
-#         )
-#
-#         to_append.append(df_trans)
-#
-#     to_append.append(to_concat)
-#
-#     return pd.concat(to_append)
