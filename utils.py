@@ -594,8 +594,11 @@ def calculate_lca(df_lci, include_incumbent=True):
 
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
-        res[metric + "_Sum"] = (
-            res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
-        )  # Convert the functional unit from calculation unit to target unit
+
+    if main_product_category in ["Fuel", "Electricity"]:
+        for metric in metrics:
+            res[metric + "_Sum"] = (
+                res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
+            )  # Convert the functional unit from calculation unit to target unit
 
     return res

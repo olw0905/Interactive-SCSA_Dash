@@ -133,13 +133,9 @@ def data_check(lci_mapping, coproduct_mapping, final_process_mapping):
         return "OK"
 
 
-def allocation(df, basis="mass"):
+def calculate_allocation_ratio(df, basis="mass"):
     """
-    Calcuates process-level allocation raio
-
-    Parameters:
-        df: the original LCI dataframe that contains inputs and outputs
-        basis: the basis for process-level allocation. Must be one of the following: "mass", "energy", or "value".
+    Calculate allcation ratio
     """
     product_flag = (df["Type"] == "Main Product") | (
         (df["Type"] == "Co-product")
@@ -164,6 +160,18 @@ def allocation(df, basis="mass"):
         products.loc[products["Type"] == "Main Product", "Amount"].sum()
         / products["Amount"].sum()
     )
+    return ratio
+
+
+def allocation(df, basis="mass"):
+    """
+    Calcuate the LCI data after allocation
+
+    Parameters:
+        df: the original LCI dataframe that contains inputs and outputs
+        basis: the basis for process-level allocation. Must be one of the following: "mass", "energy", or "value".
+    """
+    ratio = calculate_allocation_ratio(df, basis)
 
     not_allocated = (df["Type"] == "Main Product") | (
         (df["Type"] == "Co-product")

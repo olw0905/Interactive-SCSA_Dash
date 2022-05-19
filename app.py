@@ -829,7 +829,6 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         )
     ]
     if len(coproduct_res) > 0:
-        print(coproduct_res)
         coproduct_total = coproduct_res[tab + "_Sum"].sum()
         coproduct_category = coproduct_res.loc[
             coproduct_res["Type"] == "Main Product", "Category"
