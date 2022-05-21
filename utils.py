@@ -30,6 +30,75 @@ metrics = [
     "GHG",
 ]
 
+metric_units = {
+    "Total energy, Btu": "BTU",
+    "Fossil fuels, Btu": "BTU",
+    "Coal, Btu": "BTU",
+    "Natural gas, Btu": "BTU",
+    "Petroleum, Btu": "BTU",
+    "Water consumption: gallons": "gallons",
+    "VOC": "g",
+    "CO": "g",
+    "NOx": "g",
+    "PM10": "g",
+    "PM2.5": "g",
+    "SOx": "g",
+    "BC": "g",
+    "OC": "g",
+    "CH4": "g",
+    "N2O": "g",
+    "CO2": "g",
+    "Biogenic CO2": "g",
+    "CO2 (w/ C in VOC & CO)": "g",
+    "GHG": "g",
+}
+
+biorefinery_units = {  # The units used to show biorefinery-level results
+    "Total energy, Btu": "mmBTU",
+    "Fossil fuels, Btu": "mmBTU",
+    "Coal, Btu": "mmBTU",
+    "Natural gas, Btu": "mmBTU",
+    "Petroleum, Btu": "mmBTU",
+    "Water consumption: gallons": "gallons",
+    "VOC": "kg",
+    "CO": "kg",
+    "NOx": "kg",
+    "PM10": "kg",
+    "PM2.5": "kg",
+    "SOx": "kg",
+    "BC": "kg",
+    "OC": "kg",
+    "CH4": "kg",
+    "N2O": "kg",
+    "CO2": "kg",
+    "Biogenic CO2": "kg",
+    "CO2 (w/ C in VOC & CO)": "kg",
+    "GHG": "kg",
+}
+
+biorefinery_conversion = {  # The conversion used to calculate biorefinery-level results
+    "Total energy, Btu": 1000000,
+    "Fossil fuels, Btu": 1000000,
+    "Coal, Btu": 1000000,
+    "Natural gas, Btu": 1000000,
+    "Petroleum, Btu": 1000000,
+    "Water consumption: gallons": 1,
+    "VOC": 1000,
+    "CO": 1000,
+    "NOx": 1000,
+    "PM10": 1000,
+    "PM2.5": 1000,
+    "SOx": 1000,
+    "BC": 1000,
+    "OC": 1000,
+    "CH4": 1000,
+    "N2O": 1000,
+    "CO2": 1000,
+    "Biogenic CO2": 1000,
+    "CO2 (w/ C in VOC & CO)": 1000,
+    "GHG": 1000,
+}
+
 combination_basis = {  # The basis for combinaning multiple "main products"
     "Biomass": "kg",
     "Fuel": "mmBTU",
@@ -576,6 +645,7 @@ def calculate_lca(df_lci, include_incumbent=True):
     )
     res["GHG"] = (
         res["CO2 (w/ C in VOC & CO)"] * co2_gwp
+        + res["Biogenic CO2"] * co2_gwp
         + res["CH4"] * ch4_gwp
         + res["N2O"] * n2o_gwp
     )
@@ -587,6 +657,8 @@ def calculate_lca(df_lci, include_incumbent=True):
     res["Amount"] = (
         res["Amount"] / res.loc[res["Type"] == "Main Product", "Amount"].sum()
     )
+    if include_incumbent:
+        res.loc[res["Pathway"].str.contains("Incumbent"), "Amount"] = 1
     # res = res[res["Type"] != "Main Product"]
     main_product_category = res.loc[res["Type"] == "Main Product", "Category"].values[0]
     calculation_unit = primary_units[main_product_category]
@@ -600,5 +672,5 @@ def calculate_lca(df_lci, include_incumbent=True):
             res[metric + "_Sum"] = (
                 res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
             )  # Convert the functional unit from calculation unit to target unit
-
+    # print(main_product_category)
     return res

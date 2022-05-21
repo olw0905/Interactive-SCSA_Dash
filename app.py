@@ -1,5 +1,6 @@
 import base64
 import io
+from typing import final
 import plotly.graph_objs as go
 import plotly.express as px
 import numpy as np
@@ -19,8 +20,16 @@ from calc import (
     generate_final_lci,
     generate_coproduct_lci,
     data_check,
+    calculate_allocation_ratio,
 )
-from utils import display_units
+from utils import (
+    display_units,
+    format_input,
+    energy,
+    biorefinery_units,
+    biorefinery_conversion,
+    metric_units,
+)
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.BOOTSTRAP])
@@ -599,8 +608,8 @@ def update_results(
             lci_mapping, updated_coproduct_mapping, final_process_mapping
         )
         if data_status == "OK":
-            overall_lci = generate_final_lci(
-                lci_mapping, updated_coproduct_mapping, final_process_mapping
+            overall_lci, final_process = generate_final_lci(
+                lci_mapping, updated_coproduct_mapping, final_process_mapping, True
             )
             res_new = calc(overall_lci)
             update_status = True
@@ -625,8 +634,8 @@ def update_results(
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             "2021 Biochem SOT via BDO_working.xlsm"
         )
-        overall_lci = generate_final_lci(
-            lci_mapping, coproduct_mapping, final_process_mapping
+        overall_lci, final_process = generate_final_lci(
+            lci_mapping, coproduct_mapping, final_process_mapping, True
         )
         res_new = calc(overall_lci)
         coproduct_lci = generate_coproduct_lci(
@@ -672,6 +681,17 @@ def update_results(
             ),
         ]
 
+    # Calcualte the parameters required for biorefinery-level results
+    final_process_lci = format_input(lci_mapping[final_process])
+    final_process_coproduct = coproduct_mapping[final_process]
+    if "Mass" in final_process_coproduct:
+        basis = "mass"
+    elif "Energy" in final_process_coproduct:
+        basis = "energy"
+    else:
+        basis = "vaue"
+    ratio = calculate_allocation_ratio(final_process_lci, basis)
+
     data_to_return = {
         "pd": res_new.to_json(date_format="iso", orient="split"),
         "coproduct_res": coproduct_res.to_json(date_format="iso", orient="split"),
@@ -683,6 +703,7 @@ def update_results(
         "e_status": error_status,
         "e_message": data_status,
         "uploaded": uploaded,
+        "ratio": ratio,
     }
 
     return json.dumps(data_to_return), dropdown_items, None, 0
@@ -738,22 +759,9 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     ] * (
         1 - re
     )
-    coproduct_with_incumbent.loc[
-        (coproduct_with_incumbent["Resource"] == "Electricity")
-        & (~coproduct_with_incumbent["Pathway"].str.contains("Incumbent"))
-        & (coproduct_with_incumbent["Type"].str.contains("Input")),
-        tab + "_Sum",
-    ] = coproduct_with_incumbent.loc[
-        coproduct_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
-    ] * (
-        1 - re
-    )
 
     res_new = res_new_with_incumbent[
         ~res_new_with_incumbent["Pathway"].str.contains("Incumbent")
-    ]
-    coproduct_res = coproduct_with_incumbent[
-        ~coproduct_with_incumbent["Pathway"].str.contains("Incumbent")
     ]
 
     fig1_new = px.bar(
@@ -823,12 +831,66 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         res_new_with_incumbent["Pathway"].str.contains("Incumbent"), "Resource"
     ].values[0]
 
+    # For biorefinery-level results
+    main_conversion = 1
+    coproduct_conversion = 1
+    if main_product_category in [
+        "Electricity",
+        "Fuel",
+    ]:
+        main_conversion = energy.loc["MJ", "mmBTU"]
+    ratio = data["ratio"]
+    main_biomass = res_new.loc[
+        ~(res_new["Pathway"].str.contains("Incumbent"))
+        & (res_new["Type"].str.contains("Input"))
+        & (res_new["Category"] == "Biomass"),
+        "Amount",
+    ].sum()
+    main_contribution = (
+        main_product_total
+        * main_conversion
+        / main_biomass
+        * ratio
+        / biorefinery_conversion[tab]
+    )
+    main_incumbent_contribution = (
+        main_incumbent_total
+        * main_conversion
+        / main_biomass
+        * ratio
+        / biorefinery_conversion[tab]
+    )
+    coproduct_contribution = 0
+    coproduct_incumbent_contribution = 0
+
     summary = [
         html.H4(
-            f"Life-Cycle {tab} Emissions of Main Product: {main_product_total:.1f} g/{main_product_target_unit} ({main_diff:.0%} {main_change} compared to conventional {main_incumbent_resource})"
-        )
+            f"Life-Cycle {tab} Emissions of Main Product: {main_product_total:,.1f} {metric_units[tab]}/{main_product_target_unit}"
+        ),
+        html.Ul(
+            html.Li(
+                html.H5(
+                    f"{main_diff:.0%} {main_change} compared to conventional {main_incumbent_resource}"
+                )
+            )
+        ),
     ]
-    if len(coproduct_res) > 0:
+    if len(coproduct_with_incumbent) > 0:
+        coproduct_with_incumbent.loc[
+            (coproduct_with_incumbent["Resource"] == "Electricity")
+            & (~coproduct_with_incumbent["Pathway"].str.contains("Incumbent"))
+            & (coproduct_with_incumbent["Type"].str.contains("Input")),
+            tab + "_Sum",
+        ] = coproduct_with_incumbent.loc[
+            coproduct_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
+        ] * (
+            1 - re
+        )  # quick sensitivity analysis for renewable electricity %
+
+        coproduct_res = coproduct_with_incumbent[
+            ~coproduct_with_incumbent["Pathway"].str.contains("Incumbent")
+        ]
+        # if len(coproduct_res) > 0:
         coproduct_total = coproduct_res[tab + "_Sum"].sum()
         coproduct_category = coproduct_res.loc[
             coproduct_res["Type"] == "Main Product", "Category"
@@ -847,9 +909,85 @@ def update_figures(json_data, tab, re, rs, us, es, em):
             coproduct_with_incumbent["Pathway"].str.contains("Incumbent"), "Resource"
         ].values[0]
 
+        # For biorefinery-level results
+        if coproduct_category in [
+            "Electricity",
+            "Fuel",
+        ]:
+            coproduct_conversion = energy.loc["MJ", "mmBTU"]
+        coproduct_biomass = coproduct_res.loc[
+            ~(coproduct_res["Pathway"].str.contains("Incumbent"))
+            & (coproduct_res["Type"].str.contains("Input"))
+            & (coproduct_res["Category"] == "Biomass"),
+            "Amount",
+        ].sum()
+        coproduct_contribution = (
+            coproduct_total
+            * coproduct_conversion
+            / coproduct_biomass
+            * (1 - ratio)
+            / biorefinery_conversion[tab]
+        )
+        coproduct_incumbent_contribution = (
+            coproduct_incumbent_total
+            * coproduct_conversion
+            / coproduct_biomass
+            * (1 - ratio)
+            / biorefinery_conversion[tab]
+        )
+
         summary = summary + [
             html.H4(
-                f"\nLife-Cycle {tab} Emissions of Co-Product: {coproduct_total:.1f} g/{coproduct_target_unit}  ({coproduct_diff:.0%} {coproduct_change} compared to conventional {coproduct_incumbent_resource})"
+                f"\nLife-Cycle {tab} Emissions of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}"
+            ),
+            html.Ul(
+                [
+                    html.Li(
+                        html.H5(
+                            f"{coproduct_diff:.0%} {coproduct_change} compared to conventional {coproduct_incumbent_resource}"
+                        )
+                    )
+                ]
+            ),
+        ]
+
+    biorefinery_res = main_contribution + coproduct_contribution
+    biorefinery_incumbent_res = (
+        main_incumbent_contribution + coproduct_incumbent_contribution
+    )
+    biorefinery_diff = 1 - biorefinery_res / biorefinery_incumbent_res
+    biorefinery_change = "increase" if biorefinery_diff <= 0 else "reduction"
+    biorefinery_diff = abs(biorefinery_diff)
+
+    summary = summary + [
+        html.H4(
+            f"Biorefinery-level results: {main_contribution+coproduct_contribution:,.1f} {biorefinery_units[tab]}/ton"
+        ),
+        html.Ul(
+            html.Li(
+                html.H5(
+                    (
+                        f"{biorefinery_diff:.0%} {biorefinery_change} compared to the incumbent products."
+                    )
+                )
+            )
+        ),
+    ]
+    if len(coproduct_with_incumbent) > 0:
+        summary = summary + [
+            html.Ul(
+                [
+                    html.Li(
+                        html.H5(
+                            f"Contribution by the main product: {main_contribution:,.1f} {biorefinery_units[tab]}/ton"
+                        )
+                    ),
+                    html.Li(
+                        html.H5(
+                            f"Contribution by the coproduct: {coproduct_contribution:,.1f} {biorefinery_units[tab]}/ton"
+                        )
+                    ),
+                ]
             )
         ]
 

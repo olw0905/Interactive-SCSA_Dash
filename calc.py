@@ -199,7 +199,9 @@ def allocation(df, basis="mass"):
     )
 
 
-def generate_final_lci(lci_mapping, coproduct_mapping, final_process_mapping):
+def generate_final_lci(
+    lci_mapping, coproduct_mapping, final_process_mapping, return_final_process=False
+):
     """
     Generatethe final LCI file used for LCA calculation
 
@@ -252,8 +254,10 @@ def generate_final_lci(lci_mapping, coproduct_mapping, final_process_mapping):
     if system_allocation:
         overall_lci["Product Train"] = "Both"
         overall_lci = allocation(overall_lci, system_allocation_basis)
-
-    return overall_lci
+    if return_final_process:
+        return overall_lci, final_process
+    else:
+        return overall_lci
 
 
 def generate_coproduct_lci(lci_mapping, coproduct_mapping, final_process_mapping):
