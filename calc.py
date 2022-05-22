@@ -240,7 +240,7 @@ def generate_final_lci(
                 system_allocation_basis = "energy"
             elif "Value" in coproduct_mapping[sheet]:
                 system_allocation_basis = "value"
-    # return step_mapping
+
     lcis = process(step_mapping)
 
     # Locate the last process
@@ -314,7 +314,6 @@ def generate_coproduct_lci(lci_mapping, coproduct_mapping, final_process_mapping
         )
 
         lci_mapping.update({final_process: df})
-        # return lci_mapping
 
     step_mapping = {}
     for sheet in lci_mapping:
@@ -342,7 +341,7 @@ def generate_coproduct_lci(lci_mapping, coproduct_mapping, final_process_mapping
     lcis = process(step_mapping)
 
     overall_lci = lcis[final_process]
-    # return overall_lci, lcis, system_allocation, system_allocation_basis
+
     if system_allocation:
         overall_lci["Product Train"] = "Both"
         overall_lci = allocation(overall_lci, system_allocation_basis)
