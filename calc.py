@@ -140,22 +140,28 @@ def calculate_allocation_ratio(df, basis="mass"):
     product_flag = (df["Type"] == "Main Product") | (
         (df["Type"] == "Co-product")
         & (df["Always Use Displacement Method for Co-Product?"] == "No")
+        & (
+            df["Amount"] > 0
+        )  # if amount is less than zero, it means displacement method has been applied (for example, if displacement method is used for a process)
     )  # Select the products that should be accounted for when calculating allocation ratios
     products = df[product_flag].copy()
     products = products.rename(columns={"Amount": "Input Amount"})
 
-    if basis == "mass":
-        products["Primary Unit"] = "kg"
-    elif basis == "energy":
-        products["Primary Unit"] = "mmBTU"
+    if basis in ["mass", "energy"]:
+        products["Primary Unit"] = "kg" if basis == "mass" else "mmBTU"
+        products["Amount"] = products.apply(unit_conversion, axis=1)
+
     else:
         ###################### Implement market-value-based allocation here ###########################
-        pass
+        products["Primary Unit"] = products["Market Price Unit"].str[
+            2:
+        ]  # Obtain the unit: if the market price unit is $/kg, the calculated unit should be kg.
+        products["Amount"] = products.apply(unit_conversion, axis=1)
+        products["Amount"] = products["Amount"] * products["Market Price"]
 
-    products["Amount"] = products.apply(unit_conversion, axis=1)
-    products = products[
-        products["Amount"] > 0
-    ]  # Elimante the co-products to which displacement method has been applied
+    # products = products[
+    #     products["Amount"] > 0
+    # ]  # Elimante the co-products to which displacement method has been applied
     ratio = (
         products.loc[products["Type"] == "Main Product", "Amount"].sum()
         / products["Amount"].sum()

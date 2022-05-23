@@ -193,13 +193,18 @@ def energy_to_mass(ene, input_unit, lhv):
     return ene * energy.loc["MJ", input_unit] / lhv
 
 
-def unit_conversion(series):
+def unit_conversion(
+    series,
+    input_unit_col="Unit",
+    input_amount_col="Input Amount",
+    output_unit_col="Primary Unit",
+):
     "Perform unit operation for each LCI data entry"
-    input_unit = series["Unit"]
-    amount = series["Input Amount"]
+    input_unit = series[input_unit_col]
+    amount = series[input_amount_col]
     density = series["Density"]
     lhv = series["LHV"]
-    output_unit = series["Primary Unit"]
+    output_unit = series[output_unit_col]
 
     if units[input_unit] != units[output_unit]:
         if (
@@ -361,9 +366,9 @@ def convert_transport_lci(df):
         sheet_name="Transportation", skipfooter=34, index_col=0
     ).dropna(axis=1, how="all")
 
-    payload = xl.parse(
-        sheet_name="Transportation", skiprows=4, skipfooter=28, index_col=0
-    ).dropna(axis=1, how="all")
+    # payload = xl.parse(
+    #     sheet_name="Transportation", skiprows=4, skipfooter=28, index_col=0
+    # ).dropna(axis=1, how="all")
 
     dff = df.copy()
     dff["Resource"] = dff["Resource"].str.lower()
@@ -371,28 +376,45 @@ def convert_transport_lci(df):
     dff = dff[dff["Category"] != "Transportation"]
     to_append = [dff]
 
-    hhdt_payload = payload.loc["Heavy Heavy-Duty Truck"].dropna()
-    t1 = fuel_economy["Heavy Heavy-Duty Truck"].to_frame()
-    t2 = hhdt_payload.to_frame()
-    btu_per_ton_mile = t1.dot((1 / t2).T)
-    btu_per_ton_mile.columns = btu_per_ton_mile.columns.str.lower()
+    # hhdt_payload = payload.loc["Heavy Heavy-Duty Truck"].dropna()
+    # t1 = fuel_economy["Heavy Heavy-Duty Truck"].to_frame()
+    # t2 = hhdt_payload.to_frame()
+    # btu_per_ton_mile = t1.dot((1 / t2).T)
+    # btu_per_ton_mile.columns = btu_per_ton_mile.columns.str.lower()
 
-    for index, row in transport.iterrows():
+    for _, row in transport.iterrows():
         resource = row.at[
             "Resource"
         ]  # Assuming transport is a series, i.e., there is only one row for transportation
         unit = row.at["Unit"]
         distance = row.at["Amount"] * length.loc["mi", unit]
+        payload_unit = row.at["Payload Unit"]
+        resource_payload = row.at["Payload"] * mass.loc["ton", payload_unit]
+
+        btu_per_ton_mile_to_desti = (
+            fuel_economy.at[
+                "Trip from Product Origin to Destination", "Heavy Heavy-Duty Truck"
+            ]
+            / resource_payload
+        )
+        btu_per_ton_mile_to_origin = (
+            fuel_economy.at[
+                "Trip from Product Destination Back to Origin", "Heavy Heavy-Duty Truck"
+            ]
+            / resource_payload
+        )
 
         to_desti_fuel = (
-            btu_per_ton_mile.at["Trip from Product Origin to Destination", resource]
+            # btu_per_ton_mile.at["Trip from Product Origin to Destination", resource]
+            btu_per_ton_mile_to_desti
             * distance
             / 1000000
         )  # MMBtu per dry ton
         to_origin_fuel = (
-            btu_per_ton_mile.at[
-                "Trip from Product Destination Back to Origin", resource
-            ]
+            # btu_per_ton_mile.at[
+            #     "Trip from Product Destination Back to Origin", resource
+            # ]
+            btu_per_ton_mile_to_origin
             * distance
             / 1000000
         )  # MMBtu per dry ton
@@ -429,6 +451,7 @@ def convert_transport_lci(df):
                     to_origin_fuel * transport_amount,
                 ],
                 "Unit": ["mmBTU"] * 2,
+                "Product Train": row["Product Train"] * 2,
             }
         )
 
