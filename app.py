@@ -593,6 +593,7 @@ def update_results(
                 key: pd.read_json(value, orient="split")
                 for key, value in lci_data.items()
             }
+            # print(lci_mapping)
             coproduct_mapping = data[
                 "coproduct"
             ]  # The original co-product handling methods specified in the uploaded LCI file
@@ -619,6 +620,7 @@ def update_results(
             coproduct_lci = generate_coproduct_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping
             )
+            # print(lci_mapping, updated_coproduct_mapping, final_process_mapping)
             if coproduct_lci is not None:
                 coproduct_res = calc(coproduct_lci)
         else:
@@ -921,8 +923,8 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     #     * ratio
     #     / biorefinery_conversion[tab]
     # )
-    # coproduct_contribution = 0
-    # coproduct_incumbent_contribution = 0
+    coproduct_contribution = 0
+    coproduct_incumbent_contribution = 0
 
     summary = [
         html.H4(

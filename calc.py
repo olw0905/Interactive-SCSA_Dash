@@ -348,6 +348,10 @@ def generate_coproduct_lci(
     lci_mapping = generate_coproduct_lci_mapping(
         lci_mapping_original, coproduct_mapping, final_process_mapping
     )
+
+    if lci_mapping is None:
+        return None
+
     overall_lci = generate_final_lci(
         lci_mapping, coproduct_mapping, final_process_mapping
     )
