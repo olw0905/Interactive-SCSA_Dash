@@ -22,6 +22,7 @@ def read_data(lci_file):
         "SI - Resources",
         "SI - End Use",
         "SI - Units",
+        "SI - Payload",
         "Template",
     ]
     xl = pd.ExcelFile(lci_file)
@@ -153,11 +154,14 @@ def calculate_allocation_ratio(df, basis="mass"):
 
     else:
         ###################### Implement market-value-based allocation here ###########################
-        products["Primary Unit"] = products["Market Price Unit"].str[
-            2:
-        ]  # Obtain the unit: if the market price unit is $/kg, the calculated unit should be kg.
-        products["Amount"] = products.apply(unit_conversion, axis=1)
-        products["Amount"] = products["Amount"] * products["Market Price"]
+        try:  # If price is not specified for a process, return 1 (i.e., assume there is no co-product)
+            products["Primary Unit"] = products["Market Price Unit"].str[
+                2:
+            ]  # Obtain the unit: if the market price unit is $/kg, the calculated unit should be kg.
+            products["Amount"] = products.apply(unit_conversion, axis=1)
+            products["Amount"] = products["Amount"] * products["Market Price"]
+        except:
+            return 1
 
     # products = products[
     #     products["Amount"] > 0
@@ -266,9 +270,11 @@ def generate_final_lci(
         return overall_lci
 
 
-def generate_coproduct_lci(lci_mapping, coproduct_mapping, final_process_mapping):
+def generate_coproduct_lci_mapping(
+    lci_mapping_original, coproduct_mapping, final_process_mapping
+):
     """
-    Generatethe final LCI file used for LCA calculation for the coproduct
+    Generatethe lci_mapping used for LCA calculation for the coproduct
 
     Parameters:
         lci_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
@@ -278,10 +284,8 @@ def generate_coproduct_lci(lci_mapping, coproduct_mapping, final_process_mapping
     Return:
         lci_mapping_processed: the LCI data after applying the co-product handling method
     """
-    system_allocation = (
-        False  # A flag indicating whether system-level allocation is used
-    )
-    system_allocation_basis = "mass"  # The basis used for system-level allocation
+
+    lci_mapping = lci_mapping_original.copy()
 
     # Locate the last process
     for sheet, process_bool in final_process_mapping.items():
@@ -320,44 +324,109 @@ def generate_coproduct_lci(lci_mapping, coproduct_mapping, final_process_mapping
         )
 
         lci_mapping.update({final_process: df})
+        return lci_mapping
 
-    step_mapping = {}
-    for sheet in lci_mapping:
-        df = format_input(lci_mapping[sheet])
-        if "Process" in coproduct_mapping[sheet]:
-            if "Mass" in coproduct_mapping[sheet]:
-                step_mapping.update({sheet: allocation(df, "mass")})
-            elif "Energy" in coproduct_mapping[sheet]:
-                step_mapping.update({sheet: allocation(df, "energy")})
-            else:
-                step_mapping.update({sheet: allocation(df, "value")})
-        elif "Displacement" in coproduct_mapping[sheet]:
-            df.loc[df["Type"] == "Co-product", "Amount"] = -df.loc[
-                df["Type"] == "Co-product", "Amount"
-            ]
-            step_mapping.update({sheet: df})
-        else:  # System-level allocation, no processing needed at this stage
-            step_mapping.update({sheet: df})
-            system_allocation = True
-            if "Energy" in coproduct_mapping[sheet]:
-                system_allocation_basis = "energy"
-            elif "Value" in coproduct_mapping[sheet]:
-                system_allocation_basis = "value"
 
-    lcis = process(step_mapping)
+def generate_coproduct_lci(
+    lci_mapping_original, coproduct_mapping, final_process_mapping
+):
+    """
+    Generatethe final LCI file used for LCA calculation for the coproduct
 
-    overall_lci = lcis[final_process]
+    Parameters:
+        lci_mapping: a dictionary of process name and LCI data that can be used in the calc function to perform LCA calculation.
+        coproduct_mapping: a dictionary of co-product handling method. The values can be one of the following:
+            Displacement Method, Process Level Mass-Based Allocation, Process Level Energy-Based Allocation, Process Level Value-Based Allocation,
+            System Level Mass-Based Allocation, system Level-Based Energy Allocation, System Level Value-Based Allocation.
+    Return:
+        lci_mapping_processed: the LCI data after applying the co-product handling method
+    """
+    # system_allocation = (
+    #     False  # A flag indicating whether system-level allocation is used
+    # )
+    # system_allocation_basis = "mass"  # The basis used for system-level allocation
+    lci_mapping = generate_coproduct_lci_mapping(
+        lci_mapping_original, coproduct_mapping, final_process_mapping
+    )
+    overall_lci = generate_final_lci(
+        lci_mapping, coproduct_mapping, final_process_mapping
+    )
 
-    if system_allocation:
-        overall_lci["Product Train"] = "Both"
-        overall_lci = allocation(overall_lci, system_allocation_basis)
+    # # Locate the last process
+    # for sheet, process_bool in final_process_mapping.items():
+    #     if process_bool == "Yes":
+    #         final_process = sheet
+    #         break
+
+    # if "Displacement" in coproduct_mapping[final_process]:
+    #     return None
+    # else:
+    #     df = lci_mapping[final_process].copy()
+    #     if (
+    #         len(
+    #             df.loc[
+    #                 (df["Type"] == "Co-product")
+    #                 & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+    #             ]
+    #         )
+    #         == 0
+    #     ):  # There is no co-product to analyze
+    #         return None
+    #     df.loc[
+    #         (df["Type"] == "Co-product")
+    #         & (df["Always Use Displacement Method for Co-Product?"] != "Yes"),
+    #         "Type",
+    #     ] = "Main"
+    #     df.loc[
+    #         df["Type"] == "Main Product",
+    #         "Always Use Displacement Method for Co-Product?",
+    #     ] = "No"
+    #     df.loc[df["Type"] == "Main Product", "Type"] = "Co-product"
+    #     df.loc[df["Type"] == "Main", "Type"] = "Main Product"
+
+    #     df["Product Train"] = df["Product Train"].map(
+    #         {"Both": "Both", "Co-product": "Main product", "Main product": "Co-product"}
+    #     )
+
+    #     lci_mapping.update({final_process: df})
+
+    # step_mapping = {}
+    # for sheet in lci_mapping:
+    #     df = format_input(lci_mapping[sheet])
+    #     if "Process" in coproduct_mapping[sheet]:
+    #         if "Mass" in coproduct_mapping[sheet]:
+    #             step_mapping.update({sheet: allocation(df, "mass")})
+    #         elif "Energy" in coproduct_mapping[sheet]:
+    #             step_mapping.update({sheet: allocation(df, "energy")})
+    #         else:
+    #             step_mapping.update({sheet: allocation(df, "value")})
+    #     elif "Displacement" in coproduct_mapping[sheet]:
+    #         df.loc[df["Type"] == "Co-product", "Amount"] = -df.loc[
+    #             df["Type"] == "Co-product", "Amount"
+    #         ]
+    #         step_mapping.update({sheet: df})
+    #     else:  # System-level allocation, no processing needed at this stage
+    #         step_mapping.update({sheet: df})
+    #         system_allocation = True
+    #         if "Energy" in coproduct_mapping[sheet]:
+    #             system_allocation_basis = "energy"
+    #         elif "Value" in coproduct_mapping[sheet]:
+    #             system_allocation_basis = "value"
+
+    # lcis = process(step_mapping)
+
+    # overall_lci = lcis[final_process]
+
+    # if system_allocation:
+    #     overall_lci["Product Train"] = "Both"
+    # overall_lci = allocation(overall_lci, system_allocation_basis)
 
     return overall_lci
 
 
 # def calc(sheet_names, step_mapping):
 # def calc(lci_mapping, final_process_mapping, coprod="displacement", basis="mass"):
-def calc(overall_lci):
+def calc(overall_lci, include_incumbent=True):
     """
     Calculate LCA results
     lci_mapping: a dictionary containing the sheet names and original LCI data table.
@@ -378,7 +447,7 @@ def calc(overall_lci):
     # #     overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] * -1
     # # )
 
-    res = calculate_lca(overall_lci)
+    res = calculate_lca(overall_lci, include_incumbent)
     # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
     res["Resource"] = res["Resource"].str.title()
     res.loc[res["Type"].str.contains("Co-product"), "Category"] = "Co-product Credits"

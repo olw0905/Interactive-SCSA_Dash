@@ -317,7 +317,7 @@ def emission_factor(ser):
     elif (
         "Co-product" in ser["Type"]
     ):  # For co-products, the difference between end use emissions for the product and incumbent should be accounted for
-        if ser["Incumbent Resource"] == "electricity":
+        if ser["Incumbent Product"] == "electricity":
             # if pd.isnull(ser["End Use"]):
             if ser["End Use"] == "":
                 return combined_ci_table[
@@ -325,15 +325,17 @@ def emission_factor(ser):
                 ]  # If not generation mix is not specified, use national average
             else:
                 return combined_ci_table[
-                    ser["Incumbent Resource"] + "_" + ser["Incumbent End Use"]
+                    ser["Incumbent Product"] + "_" + ser["End Use of Incumbent Product"]
                 ]
         else:
             incumbent_emission = (
-                combined_ci_table[ser["Incumbent Resource"]]
+                combined_ci_table[ser["Incumbent Product"]]
                 # if pd.isnull(ser["Incumbent End Use"])
-                if ser["Incumbent End Use"] == ""
-                else combined_ci_table[ser["Incumbent Resource"]].add(
-                    end_use[ser["Incumbent Resource"], ser["Incumbent End Use"]],
+                if ser["End Use of Incumbent Product"] == ""
+                else combined_ci_table[ser["Incumbent Product"]].add(
+                    end_use[
+                        ser["Incumbent Product"], ser["End Use of Incumbent Product"]
+                    ],
                     fill_value=0,
                 )
             )
@@ -546,8 +548,8 @@ def format_input(dff):
 
     # Step 1
     df["End Use"] = df["End Use"].fillna("")
-    df["Incumbent Resource"] = df["Incumbent Resource"].fillna("")
-    df["Incumbent End Use"] = df["Incumbent End Use"].fillna("")
+    df["Incumbent Resource"] = df["Incumbent Product"].fillna("")
+    df["End Use of Incumbent Product"] = df["End Use of Incumbent Product"].fillna("")
     df["Always Use Displacement Method for Co-Product?"] = df[
         "Always Use Displacement Method for Co-Product?"
     ].fillna("No")
@@ -555,8 +557,8 @@ def format_input(dff):
     lower_case_cols = [
         "Resource",
         "End Use",
-        "Incumbent Resource",
-        "Incumbent End Use",
+        "Incumbent Product",
+        "End Use of Incumbent Product",
         # "Unit",
     ]
 
@@ -611,7 +613,7 @@ def calculate_lca(df_lci, include_incumbent=True):
 
     Parameters:
         df_lci: LCI table
-        include_incumbent: whether to include the incumbent resource in the result dataframe.
+        include_incumbent: whether to include the incumbent product in the result dataframe.
     """
 
     # df_lci["ID"] = df_lci["ID"].str.lower()
@@ -619,14 +621,14 @@ def calculate_lca(df_lci, include_incumbent=True):
     # res["Primary Unit"] = res["Primary Unit"].str.lower()
 
     if include_incumbent:
-        # Separate out the incumbent resource that the main product is compared with
+        # Separate out the incumbent product that the main product is compared with
         incumbent_resource = (
-            df_lci.loc[df_lci["Type"] == "Main Product", "Incumbent Resource"]
+            df_lci.loc[df_lci["Type"] == "Main Product", "Incumbent Product"]
             # .fillna("")
             .values[0]
         )
         incumbent_end_use = (
-            df_lci.loc[df_lci["Type"] == "Main Product", "Incumbent End Use"]
+            df_lci.loc[df_lci["Type"] == "Main Product", "End Use of Incumbent Product"]
             # .fillna("")
             .values[0]
         )

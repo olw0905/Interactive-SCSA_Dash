@@ -4,6 +4,7 @@ from typing import final
 import plotly.graph_objs as go
 import plotly.express as px
 import numpy as np
+import math
 
 import dash
 from dash import dcc, html, MATCH, ALL
@@ -29,6 +30,7 @@ from utils import (
     biorefinery_units,
     biorefinery_conversion,
     metric_units,
+    unit_conversion,
 )
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -557,7 +559,8 @@ def update_results(
     error_status = False
     dropdown_items = []
     lci_data = {}
-    coproduct_mapping = {}
+    coproduct_mapping = {}  # The coproduct mapping specified in the uploaded file
+    updated_coproduct_mapping = {}  # The coproduct mapping used in the calculation
     final_process_mapping = {}
     data_status = "OK"
     dropdown_value = None
@@ -632,14 +635,16 @@ def update_results(
         if changed_id == "reset-button":
             reset_status = True
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
-            "2021 Biochem SOT via BDO_working.xlsm"
+            # "2021 Biochem SOT via BDO_working.xlsm"
+            "Feedstock test2.xlsm"
         )
+        updated_coproduct_mapping = coproduct_mapping.copy()
         overall_lci, final_process = generate_final_lci(
-            lci_mapping, coproduct_mapping, final_process_mapping, True
+            lci_mapping, updated_coproduct_mapping, final_process_mapping, True
         )
         res_new = calc(overall_lci)
         coproduct_lci = generate_coproduct_lci(
-            lci_mapping, coproduct_mapping, final_process_mapping
+            lci_mapping, updated_coproduct_mapping, final_process_mapping
         )
         if coproduct_lci is not None:
             coproduct_res = calc(coproduct_lci)
@@ -683,14 +688,49 @@ def update_results(
 
     # Calcualte the parameters required for biorefinery-level results
     final_process_lci = format_input(lci_mapping[final_process])
-    final_process_coproduct = coproduct_mapping[final_process]
-    if "Mass" in final_process_coproduct:
-        basis = "mass"
-    elif "Energy" in final_process_coproduct:
-        basis = "energy"
+    # final_process_coproduct = coproduct_mapping[final_process]
+    final_process_coproduct = updated_coproduct_mapping[final_process]
+    if "Displacement" not in final_process_coproduct:
+        if "Mass" in final_process_coproduct:
+            basis = "mass"
+        elif "Energy" in final_process_coproduct:
+            basis = "energy"
+        else:
+            basis = "vaue"
+        ratio = calculate_allocation_ratio(final_process_lci, basis)
     else:
-        basis = "vaue"
-    ratio = calculate_allocation_ratio(final_process_lci, basis)
+        ratio = 1
+        basis = "none"
+    print(basis)
+    print(updated_coproduct_mapping)
+
+    total_biomass = 0  # Initialization
+    total_coproduct = 0
+
+    biomass_df = final_process_lci.loc[
+        final_process_lci["Category"] == "Biomass",
+    ].copy()
+    biomass_df = biomass_df.rename(columns={"Amount": "Input Amount"})
+    biomass_df["Primary Unit"] = "ton"
+    biomass_df["Amount"] = biomass_df.apply(unit_conversion, axis=1)
+    total_biomass = biomass_df["Amount"].sum()
+
+    if len(coproduct_res) > 0:
+        coproduct_category = coproduct_res.loc[
+            coproduct_res["Type"] == "Main Product", "Category"
+        ].values[0]
+        coproduct_target_unit = display_units[coproduct_category]
+        coproduct_df = final_process_lci.loc[
+            (final_process_lci["Type"] == "Co-product")
+            & (
+                final_process_lci["Always Use Displacement Method for Co-Product?"]
+                == "No"
+            ),
+        ].copy()
+        coproduct_df = coproduct_df.rename(columns={"Amount": "Input Amount"})
+        coproduct_df["Primary Unit"] = coproduct_target_unit
+        coproduct_df["Amount"] = coproduct_df.apply(unit_conversion, axis=1)
+        total_coproduct = coproduct_df["Amount"].sum()
 
     data_to_return = {
         "pd": res_new.to_json(date_format="iso", orient="split"),
@@ -703,7 +743,9 @@ def update_results(
         "e_status": error_status,
         "e_message": data_status,
         "uploaded": uploaded,
-        "ratio": ratio,
+        # "ratio": ratio,
+        "total_biomass": total_biomass,
+        "total_coproduct": total_coproduct,
     }
 
     return json.dumps(data_to_return), dropdown_items, None, 0
@@ -839,29 +881,48 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         "Fuel",
     ]:
         main_conversion = energy.loc["MJ", "mmBTU"]
-    ratio = data["ratio"]
-    main_biomass = res_new.loc[
-        ~(res_new["Pathway"].str.contains("Incumbent"))
-        & (res_new["Type"].str.contains("Input"))
-        & (res_new["Category"] == "Biomass"),
-        "Amount",
-    ].sum()
+    # ratio = data["ratio"]
+    total_biomass = data["total_biomass"]
+    total_coproduct = data["total_coproduct"]
     main_contribution = (
         main_product_total
+        * 1
         * main_conversion
-        / main_biomass
-        * ratio
+        / total_biomass
         / biorefinery_conversion[tab]
     )
     main_incumbent_contribution = (
         main_incumbent_total
+        * 1
         * main_conversion
-        / main_biomass
-        * ratio
+        / total_biomass
         / biorefinery_conversion[tab]
     )
-    coproduct_contribution = 0
-    coproduct_incumbent_contribution = 0
+    # main_biomass = total_biomass * ratio
+    # coproduct_biomass = total_biomass * (1 - ratio)
+    # print(ratio, main_biomass, coproduct_biomass, total_biomass)
+    # main_biomass = res_new.loc[
+    #     ~(res_new["Pathway"].str.contains("Incumbent"))
+    #     & (res_new["Type"].str.contains("Input"))
+    #     & (res_new["Category"] == "Biomass"),
+    #     "Amount",
+    # ].sum()
+    # main_contribution = (
+    #     main_product_total
+    #     * main_conversion
+    #     / main_biomass
+    #     * ratio
+    #     / biorefinery_conversion[tab]
+    # )
+    # main_incumbent_contribution = (
+    #     main_incumbent_total
+    #     * main_conversion
+    #     / main_biomass
+    #     * ratio
+    #     / biorefinery_conversion[tab]
+    # )
+    # coproduct_contribution = 0
+    # coproduct_incumbent_contribution = 0
 
     summary = [
         html.H4(
@@ -897,8 +958,8 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         ].values[0]
         coproduct_target_unit = display_units[coproduct_category]
 
-        coproduct_incumbent_total = res_new_with_incumbent.loc[
-            res_new_with_incumbent["Pathway"].str.contains("Incumbent"),
+        coproduct_incumbent_total = coproduct_with_incumbent.loc[
+            coproduct_with_incumbent["Pathway"].str.contains("Incumbent"),
             tab + "_Sum",
         ].sum()
 
@@ -915,26 +976,47 @@ def update_figures(json_data, tab, re, rs, us, es, em):
             "Fuel",
         ]:
             coproduct_conversion = energy.loc["MJ", "mmBTU"]
-        coproduct_biomass = coproduct_res.loc[
-            ~(coproduct_res["Pathway"].str.contains("Incumbent"))
-            & (coproduct_res["Type"].str.contains("Input"))
-            & (coproduct_res["Category"] == "Biomass"),
-            "Amount",
-        ].sum()
         coproduct_contribution = (
             coproduct_total
+            * total_coproduct
             * coproduct_conversion
-            / coproduct_biomass
-            * (1 - ratio)
+            / total_biomass
             / biorefinery_conversion[tab]
         )
         coproduct_incumbent_contribution = (
             coproduct_incumbent_total
+            * total_coproduct
             * coproduct_conversion
-            / coproduct_biomass
-            * (1 - ratio)
+            / total_biomass
             / biorefinery_conversion[tab]
         )
+        # # coproduct_biomass = coproduct_res.loc[
+        # #     ~(coproduct_res["Pathway"].str.contains("Incumbent"))
+        # #     & (coproduct_res["Type"].str.contains("Input"))
+        # #     & (coproduct_res["Category"] == "Biomass"),
+        # #     "Amount",
+        # # ].sum()
+        # coproduct_contribution = (
+        #     coproduct_total
+        #     * coproduct_conversion
+        #     / coproduct_biomass
+        #     * (1 - ratio)
+        #     / biorefinery_conversion[tab]
+        # )
+        # print(
+        #     coproduct_total,
+        #     coproduct_biomass,
+        #     ratio,
+        #     coproduct_conversion,
+        #     coproduct_contribution,
+        # )
+        # coproduct_incumbent_contribution = (
+        #     coproduct_incumbent_total
+        #     * coproduct_conversion
+        #     / coproduct_biomass
+        #     * (1 - ratio)
+        #     / biorefinery_conversion[tab]
+        # )
 
         summary = summary + [
             html.H4(
@@ -959,20 +1041,21 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     biorefinery_change = "increase" if biorefinery_diff <= 0 else "reduction"
     biorefinery_diff = abs(biorefinery_diff)
 
-    summary = summary + [
-        html.H4(
-            f"Biorefinery-level results: {main_contribution+coproduct_contribution:,.1f} {biorefinery_units[tab]}/ton"
-        ),
-        html.Ul(
-            html.Li(
-                html.H5(
-                    (
-                        f"{biorefinery_diff:.0%} {biorefinery_change} compared to the incumbent products."
+    if ~math.isinf(main_contribution + coproduct_contribution):
+        summary = summary + [
+            html.H4(
+                f"Biorefinery-level results: {main_contribution+coproduct_contribution:,.1f} {biorefinery_units[tab]}/ton"
+            ),
+            html.Ul(
+                html.Li(
+                    html.H5(
+                        (
+                            f"{biorefinery_diff:.0%} {biorefinery_change} compared to the incumbent products."
+                        )
                     )
                 )
-            )
-        ),
-    ]
+            ),
+        ]
     if len(coproduct_with_incumbent) > 0:
         summary = summary + [
             html.Ul(
