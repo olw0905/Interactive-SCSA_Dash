@@ -697,5 +697,4 @@ def calculate_lca(df_lci, include_incumbent=True):
             res[metric + "_Sum"] = (
                 res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
             )  # Convert the functional unit from calculation unit to target unit
-    # print(main_product_category)
     return res
