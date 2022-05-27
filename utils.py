@@ -530,7 +530,7 @@ def process(step_mapping, looped=False):
     return step_mapping
 
 
-def format_input(dff):
+def format_input(dff, apply_loss_factor=True):
     """
     Formatting LCI data:
         1. Convert relevant column to lower cases
@@ -538,13 +538,15 @@ def format_input(dff):
         3. Convert transportation distance to fuel consumption
         4. Merge with the properties dataframe (add the LHV and density columns)
         5. Combining multiple entries of "main products"
-        6. Normalize the LCI data: calculate the amount per unit main output
+        6. Consider the loss factor of fuel distribution
+        7. Normalize the LCI data: calculate the amount per unit main output
 
     Parameters:
         dff: Pandas DataFrame containing LCI data
     """
 
     df = dff.copy()  # Avoid chaning the original df
+    rd_dist_loss = 1.00004514306778  # Loss factor of renewable diesel distribution
 
     # Step 1
     df["End Use"] = df["End Use"].fillna("")
@@ -584,10 +586,11 @@ def format_input(dff):
 
     # Step 5
     main_products = df[df["Type"] == "Main Product"].copy()
+    main_product_category = main_products["Category"].values[0]
+    main_product_resource = main_products["Resource"].values[0]
+    main_product_end_use = main_products["End Use"].values[0]
     if len(main_products) > 1:
-        main_products["Primary Unit"] = combination_basis[
-            main_products["Category"].values[0]
-        ]
+        main_products["Primary Unit"] = combination_basis[main_product_category]
         main_products = main_products.rename(columns={"Amount": "Input Amount"})
         main_products["Amount"] = main_products.apply(unit_conversion, axis=1)
         main_products["Amount"] = main_products["Amount"].sum()
@@ -599,6 +602,16 @@ def format_input(dff):
         )
 
     # Step 6
+    if (
+        (main_product_resource == "renewable diesel")
+        and ("distribution" in main_product_end_use)
+        and (apply_loss_factor)
+    ):
+        df.loc[df["Type"] == "Main Product", "Amount"] = (
+            df.loc[df["Type"] == "Main Product", "Amount"] / rd_dist_loss
+        )
+
+    # Step 7
     main_product_amount = df.loc[
         df["Type"] == "Main Product", "Amount"
     ].sum()  # TODO: need to make sure the units are consistent

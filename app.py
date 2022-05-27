@@ -687,7 +687,7 @@ def update_results(
         ]
 
     # Calcualte the parameters required for biorefinery-level results
-    final_process_lci = format_input(lci_mapping[final_process])
+    final_process_lci = format_input(lci_mapping[final_process], False)
 
     total_biomass = 0  # Initialization
     total_coproduct = 0

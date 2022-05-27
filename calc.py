@@ -250,8 +250,9 @@ def generate_final_lci(
                 system_allocation_basis = "energy"
             elif "Value" in coproduct_mapping[sheet]:
                 system_allocation_basis = "value"
-
+    # return step_mapping
     lcis = process(step_mapping)
+    # return lcis
 
     # Locate the last process
     for sheet, process_bool in final_process_mapping.items():
