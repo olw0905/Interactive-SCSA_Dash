@@ -194,8 +194,11 @@ single_file_content = [
                     inverse=True,
                     # outline=True,
                 ),
-                width=6,
-            ),
+                # width=6,
+            )],
+        className="mb-4",
+    ),
+        dbc.Row([
             dbc.Col(
                 dbc.Card(
                     [
@@ -221,7 +224,7 @@ single_file_content = [
                     color="secondary",
                     outline=True,
                 ),
-                width=6,
+                # width=6,
             ),
         ],
         className="mb-4",
