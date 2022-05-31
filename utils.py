@@ -1,8 +1,11 @@
 # TODO: check upper or lower cases for unit, input, etc.  Decision: keep using lower case and change the case before visualization.
 # TODO: use end_use_dict
 # TODO: check the functional unit
-from json.tool import main
+# from json.tool import main
 import pandas as pd
+
+# from calc import calculate_allocation_ratio
+# from allocation import calculate_allocation_ratio
 
 # lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
 # category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
@@ -530,94 +533,113 @@ def process(step_mapping, looped=False):
     return step_mapping
 
 
-def format_input(dff, apply_loss_factor=True):
-    """
-    Formatting LCI data:
-        1. Convert relevant column to lower cases
-        2. Convert wet weight to dry weight
-        3. Convert transportation distance to fuel consumption
-        4. Merge with the properties dataframe (add the LHV and density columns)
-        5. Combining multiple entries of "main products"
-        6. Consider the loss factor of fuel distribution
-        7. Normalize the LCI data: calculate the amount per unit main output
+# def format_input(dff, apply_loss_factor=True, basis=None):
+#     """
+#     Formatting LCI data:
+#         1. Convert relevant column to lower cases
+#         2. Convert wet weight to dry weight
+#         3. Convert transportation distance to fuel consumption
+#         4. Merge with the properties dataframe (add the LHV and density columns)
+#         5. Combining multiple entries of "main products"
+#         6. Consider the loss factor of fuel distribution
+#         7. Normalize the LCI data: calculate the amount per unit main output
 
-    Parameters:
-        dff: Pandas DataFrame containing LCI data
-    """
+#     Parameters:
+#         dff: Pandas DataFrame containing LCI data
+#         apply_loss_factor: whether or not to apply the loss factor of fuel distribution
+#         basis: the basis used for combining multiple main product entries, can be None, "mass", "energy", or "value"
+#     """
 
-    df = dff.copy()  # Avoid chaning the original df
-    rd_dist_loss = 1.00004514306778  # Loss factor of renewable diesel distribution
+#     df = dff.copy()  # Avoid chaning the original df
+#     rd_dist_loss = 1.00004514306778  # Loss factor of renewable diesel distribution
 
-    # Step 1
-    df["End Use"] = df["End Use"].fillna("")
-    df["Incumbent Resource"] = df["Incumbent Product"].fillna("")
-    df["End Use of Incumbent Product"] = df["End Use of Incumbent Product"].fillna("")
-    df["Always Use Displacement Method for Co-Product?"] = df[
-        "Always Use Displacement Method for Co-Product?"
-    ].fillna("No")
+#     # Step 1
+#     df["End Use"] = df["End Use"].fillna("")
+#     df["Incumbent Resource"] = df["Incumbent Product"].fillna("")
+#     df["End Use of Incumbent Product"] = df["End Use of Incumbent Product"].fillna("")
+#     df["Always Use Displacement Method for Co-Product?"] = df[
+#         "Always Use Displacement Method for Co-Product?"
+#     ].fillna("No")
 
-    lower_case_cols = [
-        "Resource",
-        "End Use",
-        "Incumbent Product",
-        "End Use of Incumbent Product",
-        # "Unit",
-    ]
+#     lower_case_cols = [
+#         "Resource",
+#         "End Use",
+#         "Incumbent Product",
+#         "End Use of Incumbent Product",
+#         # "Unit",
+#     ]
 
-    for col in lower_case_cols:
-        df[col] = df[col].str.strip().str.lower()
+#     for col in lower_case_cols:
+#         df[col] = df[col].str.strip().str.lower()
 
-    # Step 2
-    df["Moisture"] = df["Moisture"].fillna(0)
-    df.loc[df["Category"] != "Transportation", "Amount"] = df.loc[
-        df["Category"] != "Transportation", "Amount"
-    ] * (1 - df["Moisture"])
-    df.loc[df["Category"] == "Transportation", "Amount"] = df.loc[
-        df["Category"] == "Transportation", "Amount"
-    ] / (1 - df["Moisture"])
+#     # Step 2
+#     df["Moisture"] = df["Moisture"].fillna(0)
+#     df.loc[df["Category"] != "Transportation", "Amount"] = df.loc[
+#         df["Category"] != "Transportation", "Amount"
+#     ] * (1 - df["Moisture"])
+#     df.loc[df["Category"] == "Transportation", "Amount"] = df.loc[
+#         df["Category"] == "Transportation", "Amount"
+#     ] / (1 - df["Moisture"])
 
-    # df.loc[df['Category']!='Transportation', 'Amount'] = df.loc[df['Category']!='Transportation', 'Amount'] / df.loc[df['Type']=='Main Product', 'Amount'].sum()
+#     # df.loc[df['Category']!='Transportation', 'Amount'] = df.loc[df['Category']!='Transportation', 'Amount'] / df.loc[df['Type']=='Main Product', 'Amount'].sum()
 
-    # Step 3
-    df = convert_transport_lci(df)
+#     # Step 3
+#     df = convert_transport_lci(df)
 
-    # Step 4
-    df = pd.merge(df, properties, left_on="Resource", right_index=True, how="left")
+#     # Step 4
+#     df = pd.merge(df, properties, left_on="Resource", right_index=True, how="left")
 
-    # Step 5
-    main_products = df[df["Type"] == "Main Product"].copy()
-    main_product_category = main_products["Category"].values[0]
-    main_product_resource = main_products["Resource"].values[0]
-    main_product_end_use = main_products["End Use"].values[0]
-    if len(main_products) > 1:
-        main_products["Primary Unit"] = combination_basis[main_product_category]
-        main_products = main_products.rename(columns={"Amount": "Input Amount"})
-        main_products["Amount"] = main_products.apply(unit_conversion, axis=1)
-        main_products["Amount"] = main_products["Amount"].sum()
-        main_products["Unit"] = main_products["Primary Unit"]
-        main_products = main_products.drop(["Input Amount", "Primary Unit"], axis=1)
-        df = pd.concat(
-            [df[df["Type"] != "Main Product"], main_products.iloc[:1]],
-            ignore_index=True,
-        )
+#     # Step 5
+#     main_products = df[df["Type"] == "Main Product"].copy()
+#     main_product_category = main_products["Category"].values[0]
+#     main_product_resource = main_products["Resource"].values[0]
+#     main_product_end_use = main_products["End Use"].values[0]
+#     if len(main_products) > 1:
+#         if (
+#             basis is None
+#         ):  # Displacement method, combine multiple entries by the primary unit
+#             main_products["Primary Unit"] = combination_basis[main_product_category]
+#             main_products = main_products.rename(columns={"Amount": "Input Amount"})
+#             main_products["Amount"] = main_products.apply(unit_conversion, axis=1)
+#             main_products["Amount"] = main_products["Amount"].sum()
+#             main_products["Unit"] = main_products["Primary Unit"]
+#             main_products = main_products.drop(["Input Amount", "Primary Unit"], axis=1)
+#             df = pd.concat(
+#                 [df[df["Type"] != "Main Product"], main_products.iloc[:1]],
+#                 ignore_index=True,
+#             )
+#         else:
+#             main_products.iloc[
+#                 1:, main_products.columns.get_loc("Type")
+#             ] == "Co-product"
+#             main_products["Always Use Displacement Method for Co-Product?"] = "No"
+#             ratio = calculate_allocation_ratio(main_products, basis=basis)
+#             print(ratio)
+#             df[df["Type"] != "Main Product", "Amount"] = (
+#                 df[df["Type"] != "Main Product", "Amount"] * ratio
+#             )
+#             df = pd.concat(
+#                 [df[df["Type"] != "Main Product"], main_products.iloc[:1]],
+#                 ignore_index=True,
+#             )
 
-    # Step 6
-    if (
-        (main_product_resource == "renewable diesel")
-        and ("distribution" in main_product_end_use)
-        and (apply_loss_factor)
-    ):
-        df.loc[df["Type"] == "Main Product", "Amount"] = (
-            df.loc[df["Type"] == "Main Product", "Amount"] / rd_dist_loss
-        )
+#     # Step 6
+#     if (
+#         (main_product_resource == "renewable diesel")
+#         and ("distribution" in main_product_end_use)
+#         and (apply_loss_factor)
+#     ):
+#         df.loc[df["Type"] == "Main Product", "Amount"] = (
+#             df.loc[df["Type"] == "Main Product", "Amount"] / rd_dist_loss
+#         )
 
-    # Step 7
-    main_product_amount = df.loc[
-        df["Type"] == "Main Product", "Amount"
-    ].sum()  # TODO: need to make sure the units are consistent
-    df["Amount"] = df["Amount"] / main_product_amount
+#     # Step 7
+#     main_product_amount = df.loc[
+#         df["Type"] == "Main Product", "Amount"
+#     ].sum()  # TODO: need to make sure the units are consistent
+#     df["Amount"] = df["Amount"] / main_product_amount
 
-    return df
+#     return df
 
 
 def calculate_lca(df_lci, include_incumbent=True):

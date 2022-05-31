@@ -1,4 +1,5 @@
 import base64
+from distutils import core
 import io
 from typing import final
 import plotly.graph_objs as go
@@ -21,17 +22,18 @@ from calc import (
     generate_final_lci,
     generate_coproduct_lci,
     data_check,
-    calculate_allocation_ratio,
+    # calculate_allocation_ratio,
 )
 from utils import (
     display_units,
-    format_input,
+    # format_input,
     energy,
     biorefinery_units,
     biorefinery_conversion,
     metric_units,
     unit_conversion,
 )
+from allocation import format_input
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 # app = dash.Dash(__name__, external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.BOOTSTRAP])
@@ -687,7 +689,24 @@ def update_results(
         ]
 
     # Calcualte the parameters required for biorefinery-level results
-    final_process_lci = format_input(lci_mapping[final_process], False)
+    coproduct_method = coproduct_mapping[final_process]
+    if "Mass" in coproduct_mapping:
+        basis = "mass"
+    elif "Energy" in coproduct_method:
+        basis = "energy"
+    elif "Value" in coproduct_method:
+        basis = "value"
+    else:
+        basis = None
+    final_process_lci = format_input(lci_mapping[final_process], False, basis=basis)
+    main_product_df = final_process_lci.loc[final_process_lci["Type"] == "Main Product"]
+    main_product_series = main_product_df.iloc[0].copy()
+    main_product_series["Input Amount"] = main_product_series["Amount"]
+    main_product_category = res_new.loc[
+        res_new["Type"] == "Main Product", "Category"
+    ].values[0]
+    main_product_series["Primary Unit"] = display_units[main_product_category]
+    conversion = unit_conversion(main_product_series)
 
     total_biomass = 0  # Initialization
     total_coproduct = 0
@@ -698,7 +717,7 @@ def update_results(
     biomass_df = biomass_df.rename(columns={"Amount": "Input Amount"})
     biomass_df["Primary Unit"] = "ton"
     biomass_df["Amount"] = biomass_df.apply(unit_conversion, axis=1)
-    total_biomass = biomass_df["Amount"].sum()
+    total_biomass = biomass_df["Amount"].sum() / conversion
 
     if len(coproduct_res) > 0:
         coproduct_category = coproduct_res.loc[
@@ -715,7 +734,7 @@ def update_results(
         coproduct_df = coproduct_df.rename(columns={"Amount": "Input Amount"})
         coproduct_df["Primary Unit"] = coproduct_target_unit
         coproduct_df["Amount"] = coproduct_df.apply(unit_conversion, axis=1)
-        total_coproduct = coproduct_df["Amount"].sum()
+        total_coproduct = coproduct_df["Amount"].sum() / conversion
 
     data_to_return = {
         "pd": res_new.to_json(date_format="iso", orient="split"),
@@ -861,11 +880,11 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     # For biorefinery-level results
     main_conversion = 1
     coproduct_conversion = 1
-    if main_product_category in [
-        "Electricity",
-        "Fuel",
-    ]:
-        main_conversion = energy.loc["MJ", "mmBTU"]
+    # if main_product_category in [
+    #     "Electricity",
+    #     "Fuel",
+    # ]:
+    #     main_conversion = energy.loc["MJ", "mmBTU"]
 
     total_biomass = data["total_biomass"]
     total_coproduct = data["total_coproduct"]
@@ -934,11 +953,12 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         ].values[0]
 
         # For biorefinery-level results
-        if coproduct_category in [
-            "Electricity",
-            "Fuel",
-        ]:
-            coproduct_conversion = energy.loc["MJ", "mmBTU"]
+
+        # if coproduct_category in [
+        #     "Electricity",
+        #     "Fuel",
+        # ]:
+        #     coproduct_conversion = energy.loc["MJ", "mmBTU"]
         coproduct_contribution = (
             coproduct_total
             * total_coproduct
@@ -953,22 +973,26 @@ def update_figures(json_data, tab, re, rs, us, es, em):
             / total_biomass
             / biorefinery_conversion[tab]
         )
-
-        summary = summary + [
-            html.H4(
-                f"\nLife-Cycle {tab} Emissions of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}"
-            ),
-            html.Ul(
-                [
-                    html.Li(
-                        html.H5(
-                            f"{coproduct_diff:.0%} {coproduct_change} compared to conventional {coproduct_incumbent_resource}"
+        if coproduct_total > 0:
+            summary = summary + [
+                html.H4(
+                    f"\nLife-Cycle {tab} Emissions of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}"
+                ),
+                html.Ul(
+                    [
+                        html.Li(
+                            html.H5(
+                                f"{coproduct_diff:.0%} {coproduct_change} compared to conventional {coproduct_incumbent_resource}"
+                            )
                         )
-                    )
-                ]
-            ),
-        ]
+                    ]
+                ),
+            ]
 
+    show_breakdown = True  # For displacement, set to False to hide the contributions by main and co-product to avoid confusion
+    if coproduct_contribution <= 0:
+        coproduct_contribution = coproduct_incumbent_contribution
+        show_breakdown = False
     biorefinery_res = main_contribution + coproduct_contribution
     biorefinery_incumbent_res = (
         main_incumbent_contribution + coproduct_incumbent_contribution
@@ -977,10 +1001,10 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     biorefinery_change = "increase" if biorefinery_diff <= 0 else "reduction"
     biorefinery_diff = abs(biorefinery_diff)
 
-    if ~math.isinf(main_contribution + coproduct_contribution):
+    if ~math.isinf(biorefinery_res):
         summary = summary + [
             html.H4(
-                f"Biorefinery-level results: {main_contribution+coproduct_contribution:,.1f} {biorefinery_units[tab]}/ton"
+                f"Biorefinery-level results: {biorefinery_res:,.1f} {biorefinery_units[tab]}/ton"
             ),
             html.Ul(
                 html.Li(
@@ -992,7 +1016,7 @@ def update_figures(json_data, tab, re, rs, us, es, em):
                 )
             ),
         ]
-    if len(coproduct_with_incumbent) > 0:
+    if (len(coproduct_with_incumbent) > 0) and show_breakdown:
         summary = summary + [
             html.Ul(
                 [

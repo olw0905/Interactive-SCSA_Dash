@@ -1,5 +1,6 @@
 import pandas as pd
-from utils import process, format_input, calculate_lca, unit_conversion
+from utils import process, calculate_lca
+from allocation import calculate_allocation_ratio, format_input
 
 # category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
@@ -134,43 +135,43 @@ def data_check(lci_mapping, coproduct_mapping, final_process_mapping):
         return "OK"
 
 
-def calculate_allocation_ratio(df, basis="mass"):
-    """
-    Calculate allcation ratio
-    """
-    product_flag = (df["Type"] == "Main Product") | (
-        (df["Type"] == "Co-product")
-        & (df["Always Use Displacement Method for Co-Product?"] == "No")
-        & (
-            df["Amount"] > 0
-        )  # if amount is less than zero, it means displacement method has been applied (for example, if displacement method is used for a process)
-    )  # Select the products that should be accounted for when calculating allocation ratios
-    products = df[product_flag].copy()
-    products = products.rename(columns={"Amount": "Input Amount"})
+# def calculate_allocation_ratio(df, basis="mass"):
+#     """
+#     Calculate allcation ratio
+#     """
+#     product_flag = (df["Type"] == "Main Product") | (
+#         (df["Type"] == "Co-product")
+#         & (df["Always Use Displacement Method for Co-Product?"] == "No")
+#         & (
+#             df["Amount"] > 0
+#         )  # if amount is less than zero, it means displacement method has been applied (for example, if displacement method is used for a process)
+#     )  # Select the products that should be accounted for when calculating allocation ratios
+#     products = df[product_flag].copy()
+#     products = products.rename(columns={"Amount": "Input Amount"})
 
-    if basis in ["mass", "energy"]:
-        products["Primary Unit"] = "kg" if basis == "mass" else "mmBTU"
-        products["Amount"] = products.apply(unit_conversion, axis=1)
+#     if basis in ["mass", "energy"]:
+#         products["Primary Unit"] = "kg" if basis == "mass" else "mmBTU"
+#         products["Amount"] = products.apply(unit_conversion, axis=1)
 
-    else:
-        ###################### Implement market-value-based allocation here ###########################
-        try:  # If price is not specified for a process, return 1 (i.e., assume there is no co-product)
-            products["Primary Unit"] = products["Market Price Unit"].str[
-                2:
-            ]  # Obtain the unit: if the market price unit is $/kg, the calculated unit should be kg.
-            products["Amount"] = products.apply(unit_conversion, axis=1)
-            products["Amount"] = products["Amount"] * products["Market Price"]
-        except:
-            return 1
+#     else:
+#         ###################### Implement market-value-based allocation here ###########################
+#         try:  # If price is not specified for a process, return 1 (i.e., assume there is no co-product)
+#             products["Primary Unit"] = products["Market Price Unit"].str[
+#                 2:
+#             ]  # Obtain the unit: if the market price unit is $/kg, the calculated unit should be kg.
+#             products["Amount"] = products.apply(unit_conversion, axis=1)
+#             products["Amount"] = products["Amount"] * products["Market Price"]
+#         except:
+#             return 1
 
-    # products = products[
-    #     products["Amount"] > 0
-    # ]  # Elimante the co-products to which displacement method has been applied
-    ratio = (
-        products.loc[products["Type"] == "Main Product", "Amount"].sum()
-        / products["Amount"].sum()
-    )
-    return ratio
+#     # products = products[
+#     #     products["Amount"] > 0
+#     # ]  # Elimante the co-products to which displacement method has been applied
+#     ratio = (
+#         products.loc[products["Type"] == "Main Product", "Amount"].sum()
+#         / products["Amount"].sum()
+#     )
+#     return ratio
 
 
 def allocation(df, basis="mass"):
@@ -230,26 +231,38 @@ def generate_final_lci(
 
     step_mapping = {}
     for sheet in lci_mapping:
-        df = format_input(lci_mapping[sheet])
+        # df = format_input(lci_mapping[sheet])
         if "Process" in coproduct_mapping[sheet]:
             if "Mass" in coproduct_mapping[sheet]:
+                df = format_input(lci_mapping[sheet], basis="mass")
                 step_mapping.update({sheet: allocation(df, "mass")})
             elif "Energy" in coproduct_mapping[sheet]:
+                df = format_input(lci_mapping[sheet], basis="energy")
                 step_mapping.update({sheet: allocation(df, "energy")})
             else:
+                df = format_input(lci_mapping[sheet], basis="value")
                 step_mapping.update({sheet: allocation(df, "value")})
         elif "Displacement" in coproduct_mapping[sheet]:
+            df = format_input(lci_mapping[sheet])
             df.loc[df["Type"] == "Co-product", "Amount"] = -df.loc[
                 df["Type"] == "Co-product", "Amount"
             ]
             step_mapping.update({sheet: df})
         else:  # System-level allocation, no processing needed at this stage
+            if "Mass" in coproduct_mapping[sheet]:
+                df = format_input(lci_mapping[sheet], basis="mass")
+            elif "Energy" in coproduct_mapping[sheet]:
+                df = format_input(lci_mapping[sheet], basis="energy")
+                system_allocation_basis = "energy"
+            else:
+                df = format_input(lci_mapping[sheet], basis="value")
+                system_allocation_basis = "value"
             step_mapping.update({sheet: df})
             system_allocation = True
-            if "Energy" in coproduct_mapping[sheet]:
-                system_allocation_basis = "energy"
-            elif "Value" in coproduct_mapping[sheet]:
-                system_allocation_basis = "value"
+            # if "Energy" in coproduct_mapping[sheet]:
+            #     system_allocation_basis = "energy"
+            # elif "Value" in coproduct_mapping[sheet]:
+            #     system_allocation_basis = "value"
     # return step_mapping
     lcis = process(step_mapping)
     # return lcis
@@ -295,7 +308,26 @@ def generate_coproduct_lci_mapping(
             break
 
     if "Displacement" in coproduct_mapping[final_process]:
-        return None
+        df = lci_mapping[final_process].copy()
+        if (
+            len(
+                df.loc[
+                    (df["Type"] == "Co-product")
+                    & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+                ]
+            )
+            == 0
+        ):  # There is no co-product to analyze
+            return None
+        df = df.loc[
+            (df["Type"] == "Co-product")
+            & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+        ]
+        df["Type"] = "Main Product"
+        df[
+            "End Use"
+        ] = ""  # End use is already accounted for when calculating main product results with displacement method
+        # return None
     else:
         df = lci_mapping[final_process].copy()
         if (
@@ -324,8 +356,10 @@ def generate_coproduct_lci_mapping(
             {"Both": "Both", "Co-product": "Main product", "Main product": "Co-product"}
         )
 
-        lci_mapping.update({final_process: df})
-        return lci_mapping
+        # lci_mapping.update({final_process: df})
+        # return lci_mapping
+    lci_mapping.update({final_process: df})
+    return lci_mapping
 
 
 def generate_coproduct_lci(
