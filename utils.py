@@ -116,6 +116,9 @@ primary_units = {
     "Chemicals and catalysts": "g",
     "Water": "gal",
     "Transportation": "mmBTU",  # For transportation, diesel is used
+    "Waste": "g",
+    "Direct emissions": "g",
+    "Other": "g",
 }  # The functional unit for calculation
 
 display_units = {
@@ -123,6 +126,8 @@ display_units = {
     "Biomass": "ton",  # gram, gal, or BTU per ton
     "Electricity": "MJ",  # gram, gal, or BTU per MJ
     "Chemicals and catalysts": "g",  # gram, gal, or BTU per g
+    "Waste": "g",
+    "Other": "g",
     # "Water": "gal",
 }  # The units for the final results
 

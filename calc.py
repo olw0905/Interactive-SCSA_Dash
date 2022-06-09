@@ -25,6 +25,7 @@ def read_data(lci_file):
         "SI - Units",
         "SI - Payload",
         "Template",
+        "INL Data",
     ]
     xl = pd.ExcelFile(lci_file)
     sheet_names = xl.sheet_names

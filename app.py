@@ -195,10 +195,12 @@ single_file_content = [
                     # outline=True,
                 ),
                 # width=6,
-            )],
+            )
+        ],
         className="mb-4",
     ),
-        dbc.Row([
+    dbc.Row(
+        [
             dbc.Col(
                 dbc.Card(
                     [
@@ -641,7 +643,8 @@ def update_results(
             reset_status = True
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
-            "Feedstock test2.xlsm"
+            # "Feedstock test2.xlsm"
+            "Feedstock test2-with INL data.xlsm"
         )
         updated_coproduct_mapping = coproduct_mapping.copy()
         overall_lci, final_process = generate_final_lci(
