@@ -322,6 +322,13 @@ def emission_factor(ser):
                 end_use[ser["Resource"], ser["End Use"]], fill_value=0
             )
 
+    elif "Intermediate" in ser["Type"]:  # Intermediate products
+        if (ser["Resource"] == "electricity") or (ser["End Use"] == ""):
+            return zero_emissions
+        else:
+            return zero_emissions.add(
+                end_use[ser["Resource"], ser["End Use"]], fill_value=0
+            )
     elif (
         "Co-product" in ser["Type"]
     ):  # For co-products, the difference between end use emissions for the product and incumbent should be accounted for
@@ -430,7 +437,8 @@ def convert_transport_lci(df):
         )  # MMBtu per dry ton
         # The row of transported resource and its amount
         transport_entry = dff[
-            (dff["Type"].str.contains("Input")) & (dff["Resource"] == resource)
+            (~dff["Type"].isin(["Main Product", "Co-product"]))
+            & (dff["Resource"] == resource)
         ].copy()
         transport_entry["Primary Unit"] = "ton"  # The unit of paylod is always ton
         transport_entry = transport_entry.rename(columns={"Amount": "Input Amount"})
