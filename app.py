@@ -718,12 +718,30 @@ def update_results(
     total_coproduct = 0
 
     biomass_df = final_process_lci.loc[
-        final_process_lci["Category"] == "Biomass",
+        final_process_lci["Category"].isin(["Biomass", "Waste"])
     ].copy()
-    biomass_df = biomass_df.rename(columns={"Amount": "Input Amount"})
-    biomass_df["Primary Unit"] = "ton"
-    biomass_df["Amount"] = biomass_df.apply(unit_conversion, axis=1)
-    total_biomass = biomass_df["Amount"].sum() / conversion
+    if len(biomass_df) > 0:
+        biomass_df = biomass_df.rename(columns={"Amount": "Input Amount"})
+        biomass_df["Primary Unit"] = "ton"
+        biomass_df["Amount"] = biomass_df.apply(unit_conversion, axis=1)
+        total_biomass = biomass_df["Amount"].sum() / conversion
+    else:  # for waste to energy pathways where the feedstock is not biomass
+        biomass_df = overall_lci.loc[
+            overall_lci["Category"].isin(["Biomass", "Waste"])
+        ].copy()
+        if len(biomass_df) > 0:
+            biomass_df = biomass_df.rename(columns={"Amount": "Input Amount"})
+            biomass_df["Primary Unit"] = "ton"
+            biomass_df["Amount"] = biomass_df.apply(unit_conversion, axis=1)
+            main_product_df = overall_lci.loc[overall_lci["Type"] == "Main Product"]
+            main_product_series = main_product_df.iloc[0].copy()
+            main_product_series["Input Amount"] = main_product_series["Amount"]
+            main_product_category = res_new.loc[
+                res_new["Type"] == "Main Product", "Category"
+            ].values[0]
+            main_product_series["Primary Unit"] = display_units[main_product_category]
+            conversion = unit_conversion(main_product_series)
+            total_biomass = biomass_df["Amount"].sum() / conversion
 
     if len(coproduct_res) > 0:
         coproduct_category = coproduct_res.loc[
