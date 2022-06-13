@@ -49,18 +49,53 @@ nav_item = dbc.Nav(
         dbc.NavItem(html.Hr(), className="d-none d-md-block"),
         dbc.NavItem(html.Br()),
         # dbc.NavItem(dbc.NavLink("Test")),
-        dbc.NavItem(dbc.NavLink("Biochemical Conversion", href="/", active=True)),
-        dbc.NavItem(dbc.NavLink("Catalytic Fast Pyrolysis", href="#", active="exact")),
         dbc.NavItem(
-            dbc.NavLink("Indirect Hydrothermal Liquefaction", href="#", active="exact")
-        ),
-        dbc.NavItem(dbc.NavLink("Combined Algae Processing", href="#", active="exact")),
-        dbc.NavItem(
-            dbc.NavLink("Algae Hydrothermal Liquefaction", href="#", active="exact")
+            dbc.NavLink(
+                "Biochemical Conversion",
+                # href="/Biochemical-Conversion",
+                href="/",
+                active="exact",
+                external_link=True,
+            )
         ),
         dbc.NavItem(
             dbc.NavLink(
-                "WWT Sludge Hydrothermal Liquefaction", href="#", active="exact"
+                "Catalytic Fast Pyrolysis",
+                href="/Catalytic-Fast-Pyrolysis",
+                active="exact",
+                external_link=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "Indirect Hydrothermal Liquefaction",
+                href="/Indirect-Hydrothermal-Liquefaction",
+                active="exact",
+                external_link=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "Combined Algae Processing",
+                href="/Combined-Algae-Processing",
+                active="exact",
+                external_link=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "Algae Hydrothermal Liquefaction",
+                href="/Algae-Hydrothermal-Liquefaction",
+                active="exact",
+                external_link=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "WWT Sludge Hydrothermal Liquefaction",
+                href="/WWT-Sludge-Hydrothermal-Liquefaction",
+                active="exact",
+                external_link=True,
             )
         ),
     ],
@@ -264,6 +299,23 @@ single_file_content = [
         [
             dbc.Tab(label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"),
             dbc.Tab(label="NOx", tab_id="NOx", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(
+                label="Water", tab_id="Water", activeTabClassName="fw-bold fst-italic"
+            ),
+            # dbc.Tab(label="N2O", tab_id="N2O", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="CO2", tab_id="CO2", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="CH4", tab_id="CH4", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(label="CO", tab_id="CO", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(label="SOx", tab_id="SOx", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(
+                label="PM10", tab_id="PM10", activeTabClassName="fw-bold fst-italic"
+            ),
+            dbc.Tab(
+                label="PM2.5", tab_id="PM2.5", activeTabClassName="fw-bold fst-italic"
+            ),
+            dbc.Tab(label="VOC", tab_id="VOC", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="BC", tab_id="BC", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="OC", tab_id="OC", activeTabClassName="fw-bold fst-italic"),
         ],
         id="tabs",
         active_tab="GHG",
@@ -353,6 +405,23 @@ sensitivity_content = [
         [
             dbc.Tab(label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"),
             dbc.Tab(label="NOx", tab_id="NOx", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(
+                label="Water", tab_id="Water", activeTabClassName="fw-bold fst-italic"
+            ),
+            # dbc.Tab(label="N2O", tab_id="N2O", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="CO2", tab_id="CO2", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="CH4", tab_id="CH4", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(label="CO", tab_id="CO", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(label="SOx", tab_id="SOx", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(
+                label="PM10", tab_id="PM10", activeTabClassName="fw-bold fst-italic"
+            ),
+            dbc.Tab(
+                label="PM2.5", tab_id="PM2.5", activeTabClassName="fw-bold fst-italic"
+            ),
+            dbc.Tab(label="VOC", tab_id="VOC", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="BC", tab_id="BC", activeTabClassName="fw-bold fst-italic"),
+            # dbc.Tab(label="OC", tab_id="OC", activeTabClassName="fw-bold fst-italic"),
         ],
         id="sensitivity-tabs",
         active_tab="GHG",
@@ -383,7 +452,10 @@ content = [
 ]
 
 app.layout = dbc.Container(
-    [dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")])],
+    [
+        dcc.Location(id="url", refresh=False),
+        dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")]),
+    ],
     # fluid=True
 )
 
@@ -437,7 +509,7 @@ def make_waterfall_plot(res, metric="GHG", n=4):
             y=for_plot[col].to_list() + [0],
             textposition="outside",
             text=[
-                "{:,.0f}".format(val)
+                "{:,.2f}".format(val)
                 for val in for_plot[col].to_list() + [df[col].sum()]
             ],
             connector={"line": {"color": "rgb(63, 63, 63)"}},
@@ -541,6 +613,7 @@ def toggle_navbar_collapse(n, is_open):
     Input("reset-button", "n_clicks"),
     # Input("update-lci", "n_clicks"),
     Input({"type": "update-lci", "index": ALL}, "n_clicks"),
+    Input("url", "pathname"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
     State("results", "data"),
@@ -552,6 +625,7 @@ def update_results(
     coproduct,
     n_clicks1,
     n_clicks2,
+    pathname,
     filename,
     date,
     stored_data,
@@ -641,10 +715,13 @@ def update_results(
     else:
         if changed_id == "reset-button":
             reset_status = True
+        file_to_use = "Feedstock test2-with INL data.xlsm"
+        if "Sludge" in pathname:
+            file_to_use = "sludge HTL3.xlsm"
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
             # "Feedstock test2.xlsm"
-            "Feedstock test2-with INL data.xlsm"
+            file_to_use
         )
         updated_coproduct_mapping = coproduct_mapping.copy()
         overall_lci, final_process = generate_final_lci(
@@ -805,6 +882,13 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
+    unit_sup = " CO2e" if tab == "GHG" else ""
+    if tab == "Water":
+        tab = "Water consumption: gallons"
+        tab_summary = "Water Consumption"
+    else:
+        tab_summary = tab + " Emission"
+
     if changed_id == "results":
         reset_status = data["r_status"]
         update_status = data["p_status"]
@@ -834,14 +918,20 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         ~res_new_with_incumbent["Pathway"].str.contains("Incumbent")
     ]
 
+    main_product_total = res_new[tab + "_Sum"].sum()
+    main_product_category = res_new.loc[
+        res_new["Type"] == "Main Product", "Category"
+    ].values[0]
+    main_product_target_unit = display_units[main_product_category]
+
     fig1_new = px.bar(
         res_new_with_incumbent, x="Pathway", y=tab + "_Sum", color="Process"
     )
-    fig1_new.update_layout(
-        barmode="relative", title="Breakdown of " + tab + " Emissions"
-    )
+    fig1_new.update_layout(barmode="relative", title="Breakdown of " + tab_summary)
     fig1_new.update_traces(marker_line_width=0)
-    fig1_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+    fig1_new.update_yaxes(
+        title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
+    )
 
     fig2_new = px.bar(
         res_new,
@@ -852,9 +942,11 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     )
     fig2_new.update_layout(barmode="relative")
     fig2_new.update_traces(marker_line_width=0)
-    fig2_new.update_layout(title="Breakdown of " + tab + " Emissions by Process")
+    fig2_new.update_layout(title="Breakdown of " + tab_summary + " by Process")
     fig2_new.update_xaxes(title="Process")
-    fig2_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+    fig2_new.update_yaxes(
+        title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
+    )
 
     fig3_new = make_waterfall_plot(res_new, tab)
     # fig2_new = px.bar(
@@ -866,7 +958,9 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     # )
     fig3_new.update_layout(title="Waterfall Chart of " + tab + " Emissions by Inputs")
     # fig2_new.update_xaxes(title='Process')
-    fig3_new.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+    fig3_new.update_yaxes(
+        title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
+    )
 
     # fig3_new = px.pie(res_new, values=tab + "_Sum", names="Category")
     # fig3_new.update_layout(title="% Contribution to " + tab + " Emissions")
@@ -879,15 +973,15 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         values=tab + "_Sum",
         color="Process",
     )
-    fig4_new.update_layout(title="Breakdown of " + tab + " Emissions by Inputs")
+    fig4_new.update_layout(title="Breakdown of " + tab_summary + " by Inputs")
     # fig4_new.update_xaxes(title='Process')
     # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
-    main_product_total = res_new[tab + "_Sum"].sum()
-    main_product_category = res_new.loc[
-        res_new["Type"] == "Main Product", "Category"
-    ].values[0]
-    main_product_target_unit = display_units[main_product_category]
+    # main_product_total = res_new[tab + "_Sum"].sum()
+    # main_product_category = res_new.loc[
+    #     res_new["Type"] == "Main Product", "Category"
+    # ].values[0]
+    # main_product_target_unit = display_units[main_product_category]
 
     main_incumbent_total = res_new_with_incumbent.loc[
         res_new_with_incumbent["Pathway"].str.contains("Incumbent"),
@@ -932,7 +1026,7 @@ def update_figures(json_data, tab, re, rs, us, es, em):
 
     summary = [
         html.H4(
-            f"Life-Cycle {tab} Emissions of Main Product: {main_product_total:,.1f} {metric_units[tab]}/{main_product_target_unit}"
+            f"Life-Cycle {tab_summary} of Main Product: {main_product_total:,.1f} {metric_units[tab]}/{main_product_target_unit}"
         ),
         html.Ul(
             html.Li(
@@ -1000,7 +1094,7 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         if coproduct_total > 0:
             summary = summary + [
                 html.H4(
-                    f"\nLife-Cycle {tab} Emissions of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}"
+                    f"\nLife-Cycle {tab_summary} of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}"
                 ),
                 html.Ul(
                     [
@@ -1208,6 +1302,13 @@ def update_sensitivity_figures(json_data, tab, es, em):
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
+    unit_sup = " CO2e" if tab == "GHG" else ""
+    if tab == "Water":
+        tab = "Water consumption: gallons"
+        tab_summary = "Water Consumption"
+    else:
+        tab_summary = tab + " Emission"
+
     if changed_id == "sensitivity-results":
         sensitivity_error_status = data["e_status"]
         sensitivity_error_message = data["e_message"]
@@ -1225,6 +1326,11 @@ def update_sensitivity_figures(json_data, tab, es, em):
     df = pd.read_json(data["pd"], orient="split")
 
     if len(df) > 0:
+        main_product_category = df.loc[df["Type"] == "Main Product", "Category"].values[
+            0
+        ]
+        main_product_target_unit = display_units[main_product_category]
+
         fig1_sensitivity = px.bar(
             df,
             x="FileName",
@@ -1235,10 +1341,12 @@ def update_sensitivity_figures(json_data, tab, es, em):
         fig1_sensitivity.update_layout(barmode="relative")
         fig1_sensitivity.update_traces(marker_line_width=0)
         fig1_sensitivity.update_layout(
-            title="Breakdown of " + tab + " Emissions by Process"
+            title="Breakdown of " + tab_summary + " by Process"
         )
         fig1_sensitivity.update_xaxes(title="Cases")
-        fig1_sensitivity.update_yaxes(title=tab + " Emissions (g CO2e/MJ)")
+        fig1_sensitivity.update_yaxes(
+            title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
+        )
         return (
             fig1_sensitivity,
             sensitivity_error_status,
