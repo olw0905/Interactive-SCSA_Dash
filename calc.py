@@ -212,7 +212,11 @@ def allocation(df, basis="mass"):
 
 
 def generate_final_lci(
-    lci_mapping, coproduct_mapping, final_process_mapping, return_final_process=False
+    lci_mapping,
+    coproduct_mapping,
+    final_process_mapping,
+    return_final_process=False,
+    apply_loss_factor=True,
 ):
     """
     Generatethe final LCI file used for LCA calculation
@@ -279,6 +283,23 @@ def generate_final_lci(
     if system_allocation:
         overall_lci["Product Train"] = "Both"
         overall_lci = allocation(overall_lci, system_allocation_basis)
+
+    main_products = overall_lci[overall_lci["Type"] == "Main Product"]
+    # main_product_category = main_products["Category"].values[0]
+    main_product_resource = main_products["Resource"].values[0]
+    main_product_end_use = main_products["End Use"].values[0]
+    rd_dist_loss = 1.00004514306778
+
+    if (
+        (main_product_resource == "renewable diesel")
+        and ("distribution" in main_product_end_use)
+        and (apply_loss_factor)
+    ):
+        overall_lci.loc[overall_lci["Type"] != "Main Product", "Amount"] = (
+            overall_lci.loc[overall_lci["Type"] != "Main Product", "Amount"]
+            * rd_dist_loss
+        )
+
     if return_final_process:
         return overall_lci, final_process
     else:

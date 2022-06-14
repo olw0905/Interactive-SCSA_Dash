@@ -41,7 +41,7 @@ def calculate_allocation_ratio(df, basis="mass"):
     return ratio
 
 
-def format_input(dff, apply_loss_factor=True, basis=None):
+def format_input(dff, basis=None):
     """
     Formatting LCI data:
         1. Convert relevant column to lower cases
@@ -59,7 +59,7 @@ def format_input(dff, apply_loss_factor=True, basis=None):
     """
 
     df = dff.copy()  # Avoid chaning the original df
-    rd_dist_loss = 1.00004514306778  # Loss factor of renewable diesel distribution
+    # rd_dist_loss = 1.00004514306778  # Loss factor of renewable diesel distribution
 
     # Step 1
     df["End Use"] = df["End Use"].fillna("")
@@ -128,15 +128,15 @@ def format_input(dff, apply_loss_factor=True, basis=None):
                 ignore_index=True,
             )
 
-    # Step 6
-    if (
-        (main_product_resource == "renewable diesel")
-        and ("distribution" in main_product_end_use)
-        and (apply_loss_factor)
-    ):
-        df.loc[df["Type"] == "Main Product", "Amount"] = (
-            df.loc[df["Type"] == "Main Product", "Amount"] / rd_dist_loss
-        )
+    # # Step 6
+    # if (
+    #     (main_product_resource == "renewable diesel")
+    #     and ("distribution" in main_product_end_use)
+    #     and (apply_loss_factor)
+    # ):
+    #     df.loc[df["Type"] == "Main Product", "Amount"] = (
+    #         df.loc[df["Type"] == "Main Product", "Amount"] / rd_dist_loss
+    #     )
 
     # Step 7
     main_product_amount = df.loc[

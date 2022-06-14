@@ -286,6 +286,7 @@ end_use = pd.read_excel(
     skipfooter=2,
 )
 end_use = end_use.drop("Primary Unit").fillna(0)
+end_use.index = end_use.index.str.strip()
 end_use.columns = end_use.columns.set_levels(
     [end_use.columns.levels[0].str.lower(), end_use.columns.levels[1].str.lower()]
 )

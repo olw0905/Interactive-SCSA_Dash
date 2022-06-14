@@ -781,7 +781,7 @@ def update_results(
         basis = "value"
     else:
         basis = None
-    final_process_lci = format_input(lci_mapping[final_process], False, basis=basis)
+    final_process_lci = format_input(lci_mapping[final_process], basis=basis)
     main_product_df = final_process_lci.loc[final_process_lci["Type"] == "Main Product"]
     main_product_series = main_product_df.iloc[0].copy()
     main_product_series["Input Amount"] = main_product_series["Amount"]
@@ -956,7 +956,7 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     #     color="Process",
     #     custom_data=["Process"],
     # )
-    fig3_new.update_layout(title="Waterfall Chart of " + tab + " Emissions by Inputs")
+    fig3_new.update_layout(title="Waterfall Chart of " + tab_summary + " by Inputs")
     # fig2_new.update_xaxes(title='Process')
     fig3_new.update_yaxes(
         title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
