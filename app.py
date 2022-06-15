@@ -53,39 +53,7 @@ nav_item = dbc.Nav(
             dbc.NavLink(
                 "Biochemical Conversion",
                 # href="/Biochemical-Conversion",
-                href="/",
-                active="exact",
-                external_link=True,
-            )
-        ),
-        dbc.NavItem(
-            dbc.NavLink(
-                "Catalytic Fast Pyrolysis",
-                href="/Catalytic-Fast-Pyrolysis",
-                active="exact",
-                external_link=True,
-            )
-        ),
-        dbc.NavItem(
-            dbc.NavLink(
-                "Indirect Hydrothermal Liquefaction",
-                href="/Indirect-Hydrothermal-Liquefaction",
-                active="exact",
-                external_link=True,
-            )
-        ),
-        dbc.NavItem(
-            dbc.NavLink(
-                "Combined Algae Processing",
-                href="/Combined-Algae-Processing",
-                active="exact",
-                external_link=True,
-            )
-        ),
-        dbc.NavItem(
-            dbc.NavLink(
-                "Algae Hydrothermal Liquefaction",
-                href="/Algae-Hydrothermal-Liquefaction",
+                href="/Biochemical-Conversion",
                 active="exact",
                 external_link=True,
             )
@@ -96,6 +64,42 @@ nav_item = dbc.Nav(
                 href="/WWT-Sludge-Hydrothermal-Liquefaction",
                 active="exact",
                 external_link=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "Catalytic Fast Pyrolysis",
+                href="/Catalytic-Fast-Pyrolysis",
+                active="exact",
+                external_link=True,
+                disabled=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "Indirect Hydrothermal Liquefaction",
+                href="/Indirect-Hydrothermal-Liquefaction",
+                active="exact",
+                external_link=True,
+                disabled=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "Combined Algae Processing",
+                href="/Combined-Algae-Processing",
+                active="exact",
+                external_link=True,
+                disabled=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
+                "Algae Hydrothermal Liquefaction",
+                href="/Algae-Hydrothermal-Liquefaction",
+                active="exact",
+                external_link=True,
+                disabled=True,
             )
         ),
     ],
@@ -442,10 +446,11 @@ content = [
     html.Br(),
     html.H1(children="SOT LCA Results", className="text-dark"),
     html.H3(
-        children="""
-    RD Production from Corn Stover via Biochem Pathway
-""",
+        #         children="""
+        #     RD Production from Corn Stover via Biochem Pathway
+        # """,
         className="text-muted text-decoration-underline",
+        id="pathway-title",
     ),
     html.Hr(),
     overall_tabs,
@@ -519,6 +524,20 @@ def make_waterfall_plot(res, metric="GHG", n=4):
     fig.update_layout(showlegend=False)
 
     return fig
+
+
+@app.callback(
+    Output("pathway-title", "children"),
+    Input("url", "pathname"),
+)
+def update_pathway_title(pathname):
+    """
+    Update the pathway title
+    """
+    pathway_title = "RD Production from Corn Stover via Biochemical Conversion"
+    if "Sludge" in pathname:
+        pathway_title = "RD Production from WWTP's Sludge via Hydrothermal Liquefaction"
+    return pathway_title
 
 
 @app.callback(
