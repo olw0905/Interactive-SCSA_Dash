@@ -16,7 +16,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import json
 from calc import (
-    generate_coproduct_lci,
+    # generate_coproduct_lci,
     read_data,
     calc,
     generate_final_lci,
@@ -481,6 +481,27 @@ def parse_contents(contents, filename, date):
     return lci_file
 
 
+def quick_sensitivity(dff, renew_elec_share):
+    """
+    Perform sensitivity analysis for renewable electricity share
+    """
+    df = dff.copy()
+    elec_df = df.loc[(df["Type"] == "Input") & (df["Resource"] == "electricity")]
+    elec_to_append = elec_df.copy()
+    elec_to_append["End Use"] = "renewable"
+    elec_to_append["Amount"] = elec_to_append["Amount"] * renew_elec_share
+    # df.loc[(df['Type']=='Input')&(df['Resource']='electricity')]
+    df.loc[
+        (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
+    ] = df.loc[
+        (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
+    ] * (
+        1 - renew_elec_share
+    )
+
+    return pd.concat([df, elec_to_append], ignore_index=True)
+
+
 def make_waterfall_plot(res, metric="GHG", n=4):
     """
     Generate the waterfall plot
@@ -632,6 +653,7 @@ def toggle_navbar_collapse(n, is_open):
     Input("reset-button", "n_clicks"),
     # Input("update-lci", "n_clicks"),
     Input({"type": "update-lci", "index": ALL}, "n_clicks"),
+    Input("renewable_elec", "value"),
     Input("url", "pathname"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
@@ -644,6 +666,7 @@ def update_results(
     coproduct,
     n_clicks1,
     n_clicks2,
+    renewable_elec_share,
     pathname,
     filename,
     date,
@@ -667,12 +690,17 @@ def update_results(
     uploaded = False  # Whether a new LCI file has been uploaded
     lci_new = None
     coproduct_res = pd.DataFrame()
+    renew_elec = 0
     # error_message = ""
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if contents or ("update-lci" in changed_id) or (changed_id == "coproduct-handling"):
+    if (
+        contents
+        or ("update-lci" in changed_id)
+        or (changed_id in ["coproduct-handling", "renewable_elec"])
+    ):
         if contents:
             lci_new = parse_contents(contents, filename, date)
 
@@ -683,7 +711,7 @@ def update_results(
                 uploaded = True
         if (
             ("update-lci" in changed_id)
-            or (changed_id == "coproduct-handling")
+            or (changed_id in ["coproduct-handling", "renewable_elec"])
             or isinstance(lci_new, str)
         ):
             data = json.loads(stored_data)
@@ -697,10 +725,12 @@ def update_results(
                 "coproduct"
             ]  # The original co-product handling methods specified in the uploaded LCI file
             final_process_mapping = data["final_process"]
+            renew_elec = renewable_elec_share
 
             if "update-lci" in changed_id:
                 lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
                 dropdown_value = process_to_edit[0]
+                renew_elec = 0
 
         if coproduct != "User Specification":
             updated_coproduct_mapping = {key: coproduct for key in coproduct_mapping}
@@ -714,18 +744,21 @@ def update_results(
             overall_lci, final_process = generate_final_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping, True
             )
+            overall_lci = quick_sensitivity(overall_lci, renew_elec)
             res_new = calc(overall_lci)
             update_status = True
             coproduct_lci = generate_coproduct_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping
             )
             if coproduct_lci is not None:
+                coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec)
                 coproduct_res = calc(coproduct_lci)
         else:
             data = json.loads(stored_data)
             res_new = pd.read_json(data["pd"], orient="split")
             coproduct_res = pd.read_json(data["coproduct_res"], orient="split")
             error_status = True
+            renew_elec = 0
         # if lci_new is not None:
         if isinstance(lci_new, str):
             data_status = lci_new
@@ -734,6 +767,7 @@ def update_results(
     else:
         if changed_id == "reset-button":
             reset_status = True
+            renew_elec = 0
         file_to_use = "Feedstock test2-with INL data.xlsm"
         if "Sludge" in pathname:
             file_to_use = "sludge HTL3.xlsm"
@@ -746,11 +780,13 @@ def update_results(
         overall_lci, final_process = generate_final_lci(
             lci_mapping, updated_coproduct_mapping, final_process_mapping, True
         )
+        overall_lci = quick_sensitivity(overall_lci, renew_elec)
         res_new = calc(overall_lci)
         coproduct_lci = generate_coproduct_lci(
             lci_mapping, updated_coproduct_mapping, final_process_mapping
         )
         if coproduct_lci is not None:
+            coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec)
             coproduct_res = calc(coproduct_lci)
 
     lci_data = {
@@ -872,7 +908,8 @@ def update_results(
         "total_coproduct": total_coproduct,
     }
 
-    return json.dumps(data_to_return), dropdown_items, None, 0
+    # return json.dumps(data_to_return), dropdown_items, None, 0
+    return json.dumps(data_to_return), dropdown_items, None, renew_elec
 
 
 @app.callback(
@@ -922,16 +959,16 @@ def update_figures(json_data, tab, re, rs, us, es, em):
     res_new_with_incumbent = pd.read_json(data["pd"], orient="split")
     coproduct_with_incumbent = pd.read_json(data["coproduct_res"], orient="split")
 
-    res_new_with_incumbent.loc[
-        (res_new_with_incumbent["Resource"] == "Electricity")
-        & (~res_new_with_incumbent["Pathway"].str.contains("Incumbent"))
-        & (res_new_with_incumbent["Type"].str.contains("Input")),
-        tab + "_Sum",
-    ] = res_new_with_incumbent.loc[
-        res_new_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
-    ] * (
-        1 - re
-    )
+    # res_new_with_incumbent.loc[
+    #     (res_new_with_incumbent["Resource"] == "Electricity")
+    #     & (~res_new_with_incumbent["Pathway"].str.contains("Incumbent"))
+    #     & (res_new_with_incumbent["Type"].str.contains("Input")),
+    #     tab + "_Sum",
+    # ] = res_new_with_incumbent.loc[
+    #     res_new_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
+    # ] * (
+    #     1 - re
+    # )
 
     res_new = res_new_with_incumbent[
         ~res_new_with_incumbent["Pathway"].str.contains("Incumbent")
@@ -1056,16 +1093,16 @@ def update_figures(json_data, tab, re, rs, us, es, em):
         ),
     ]
     if len(coproduct_with_incumbent) > 0:
-        coproduct_with_incumbent.loc[
-            (coproduct_with_incumbent["Resource"] == "Electricity")
-            & (~coproduct_with_incumbent["Pathway"].str.contains("Incumbent"))
-            & (coproduct_with_incumbent["Type"].str.contains("Input")),
-            tab + "_Sum",
-        ] = coproduct_with_incumbent.loc[
-            coproduct_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
-        ] * (
-            1 - re
-        )  # quick sensitivity analysis for renewable electricity %
+        #     coproduct_with_incumbent.loc[
+        #         (coproduct_with_incumbent["Resource"] == "Electricity")
+        #         & (~coproduct_with_incumbent["Pathway"].str.contains("Incumbent"))
+        #         & (coproduct_with_incumbent["Type"].str.contains("Input")),
+        #         tab + "_Sum",
+        #     ] = coproduct_with_incumbent.loc[
+        #         coproduct_with_incumbent["Resource"] == "Electricity", tab + "_Sum"
+        #     ] * (
+        #         1 - re
+        #     )  # quick sensitivity analysis for renewable electricity %
 
         coproduct_res = coproduct_with_incumbent[
             ~coproduct_with_incumbent["Pathway"].str.contains("Incumbent")
