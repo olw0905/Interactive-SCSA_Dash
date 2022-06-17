@@ -291,6 +291,18 @@ single_file_content = [
                                 value=0,
                                 id="renewable_elec",
                             ),
+                            html.H5("Renewable Natural Gas %", className="text-center"),
+                            dcc.Slider(
+                                0,
+                                1,
+                                step=None,
+                                marks={
+                                    val: "{:.0%}".format(val)
+                                    for val in np.linspace(0, 1, 11)
+                                },
+                                value=0,
+                                id="rng_share",
+                            ),
                         ]
                     ),
                 ],
@@ -483,28 +495,62 @@ def parse_contents(contents, filename, date):
     return lci_file
 
 
-def quick_sensitivity(dff, renew_elec_share):
+def elec_sensitivity(dff, renew_elec_share):
     """
     Perform sensitivity analysis for renewable electricity share
     """
     if renew_elec_share == 0:
         return dff
-    else:
-        df = dff.copy()
-        elec_df = df.loc[(df["Type"] == "Input") & (df["Resource"] == "electricity")]
-        elec_to_append = elec_df.copy()
-        elec_to_append["End Use"] = "renewable"
-        elec_to_append["Amount"] = elec_to_append["Amount"] * renew_elec_share
-        # df.loc[(df['Type']=='Input')&(df['Resource']='electricity')]
-        df.loc[
-            (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
-        ] = df.loc[
-            (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
-        ] * (
-            1 - renew_elec_share
-        )
 
-        return pd.concat([df, elec_to_append], ignore_index=True)
+    df = dff.copy()
+    elec_df = df.loc[(df["Type"] == "Input") & (df["Resource"] == "electricity")]
+    elec_to_append = elec_df.copy()
+    elec_to_append["End Use"] = "renewable"
+    elec_to_append["Amount"] = elec_to_append["Amount"] * renew_elec_share
+    # df.loc[(df['Type']=='Input')&(df['Resource']='electricity')]
+    df.loc[
+        (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
+    ] = df.loc[
+        (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
+    ] * (
+        1 - renew_elec_share
+    )
+
+    return pd.concat([df, elec_to_append], ignore_index=True)
+
+
+def rng_sensitivity(dff, rng_share):
+    """
+    Perform sensitivity analysis for RNG share
+    """
+    if rng_share == 0:
+        return dff
+
+    df = dff.copy()
+    ng_df = df.loc[(df["Type"] == "Input") & (df["Resource"] == "natural gas")]
+    ng_to_append = ng_df.copy()
+    ng_to_append["Resource"] = "renewable natural gas"
+    ng_to_append["Amount"] = ng_to_append["Amount"] * rng_share
+    # df.loc[(df['Type']=='Input')&(df['Resource']='electricity')]
+    df.loc[
+        (df["Type"] == "Input") & (df["Resource"] == "natural gas"), "Amount"
+    ] = df.loc[
+        (df["Type"] == "Input") & (df["Resource"] == "natural gas"), "Amount"
+    ] * (
+        1 - rng_share
+    )
+
+    return pd.concat([df, ng_to_append], ignore_index=True)
+
+
+def quick_sensitivity(dff, renew_elec_share, rng_share):
+    """
+    All-in-one funciton for quick sensitivity analysis
+    """
+    df = dff.copy()
+    df = elec_sensitivity(df, renew_elec_share)
+    df = rng_sensitivity(df, rng_share)
+    return df
 
 
 def make_waterfall_plot(res, metric="GHG", n=4):
@@ -659,12 +705,14 @@ def toggle_navbar_collapse(n, is_open):
     Output("dropdown", "children"),
     Output("upload-data", "contents"),
     Output("renewable_elec", "value"),
+    Output("rng_share", "value"),
     Input("upload-data", "contents"),
     Input("coproduct-handling", "value"),
     Input("reset-button", "n_clicks"),
     # Input("update-lci", "n_clicks"),
     Input({"type": "update-lci", "index": ALL}, "n_clicks"),
     Input("renewable_elec", "value"),
+    Input("rng_share", "value"),
     Input("url", "pathname"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
@@ -678,6 +726,7 @@ def update_results(
     n_clicks1,
     n_clicks2,
     renewable_elec_share,
+    rng_share,
     pathname,
     filename,
     date,
@@ -702,6 +751,7 @@ def update_results(
     lci_new = None
     coproduct_res = pd.DataFrame()
     renew_elec = 0
+    rng = 0
     # error_message = ""
 
     ctx = dash.callback_context
@@ -710,7 +760,7 @@ def update_results(
     if (
         contents
         or ("update-lci" in changed_id)
-        or (changed_id in ["coproduct-handling", "renewable_elec"])
+        or (changed_id in ["coproduct-handling", "renewable_elec", "rng_share"])
     ):
         if contents:
             lci_new = parse_contents(contents, filename, date)
@@ -722,7 +772,7 @@ def update_results(
                 uploaded = True
         if (
             ("update-lci" in changed_id)
-            or (changed_id in ["coproduct-handling", "renewable_elec"])
+            or (changed_id in ["coproduct-handling", "renewable_elec", "rng_share"])
             or isinstance(lci_new, str)
         ):
             data = json.loads(stored_data)
@@ -737,11 +787,13 @@ def update_results(
             ]  # The original co-product handling methods specified in the uploaded LCI file
             final_process_mapping = data["final_process"]
             renew_elec = renewable_elec_share
+            rng = rng_share
 
             if "update-lci" in changed_id:
                 lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
                 dropdown_value = process_to_edit[0]
                 renew_elec = 0
+                rng = 0
 
         if coproduct != "User Specification":
             updated_coproduct_mapping = {key: coproduct for key in coproduct_mapping}
@@ -755,14 +807,18 @@ def update_results(
             overall_lci, final_process = generate_final_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping, True
             )
-            overall_lci = quick_sensitivity(overall_lci, renew_elec)
+            # overall_lci = elec_sensitivity(overall_lci, renew_elec)
+            # overall_lci = rng_sensitivity(overall_lci, rng)
+            overall_lci = quick_sensitivity(overall_lci, renew_elec, rng)
             res_new = postprocess(calculate_lca(overall_lci))
             update_status = True
             coproduct_lci = generate_coproduct_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping
             )
             if coproduct_lci is not None:
-                coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec)
+                # coproduct_lci = elec_sensitivity(coproduct_lci, renew_elec)
+                # coproduct_lci = rng_sensitivity(coproduct_lci, rng)
+                coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec, rng)
                 coproduct_res = postprocess(calculate_lca(coproduct_lci))
         else:
             data = json.loads(stored_data)
@@ -770,6 +826,7 @@ def update_results(
             coproduct_res = pd.read_json(data["coproduct_res"], orient="split")
             error_status = True
             renew_elec = 0
+            rng = 0
         # if lci_new is not None:
         if isinstance(lci_new, str):
             data_status = lci_new
@@ -779,6 +836,7 @@ def update_results(
         if changed_id == "reset-button":
             reset_status = True
             renew_elec = 0
+            rng = 0
         file_to_use = "Feedstock test2-with INL data.xlsm"
         if "Sludge" in pathname:
             file_to_use = "sludge HTL3.xlsm"
@@ -791,13 +849,17 @@ def update_results(
         overall_lci, final_process = generate_final_lci(
             lci_mapping, updated_coproduct_mapping, final_process_mapping, True
         )
-        overall_lci = quick_sensitivity(overall_lci, renew_elec)
+        # overall_lci = elec_sensitivity(overall_lci, renew_elec)
+        # overall_lci = rng_sensitivity(overall_lci, rng)
+        overall_lci = quick_sensitivity(overall_lci, renew_elec, rng)
         res_new = postprocess(calculate_lca(overall_lci))
         coproduct_lci = generate_coproduct_lci(
             lci_mapping, updated_coproduct_mapping, final_process_mapping
         )
         if coproduct_lci is not None:
-            coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec)
+            # coproduct_lci = elec_sensitivity(coproduct_lci, renew_elec)
+            # coproduct_lci = rng_sensitivity(coproduct_lci, rng)
+            coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec, rng)
             coproduct_res = postprocess(calculate_lca(coproduct_lci))
 
     lci_data = {
@@ -920,7 +982,7 @@ def update_results(
     }
 
     # return json.dumps(data_to_return), dropdown_items, None, 0
-    return json.dumps(data_to_return), dropdown_items, None, renew_elec
+    return json.dumps(data_to_return), dropdown_items, None, renew_elec, rng
 
 
 @app.callback(
