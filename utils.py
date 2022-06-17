@@ -511,7 +511,7 @@ def step_processing(step_map, step_name):
 
         to_concat.append(step_df)
 
-    df_final = pd.concat(to_concat, ignore_index=True)
+    df_final = pd.concat(to_concat[::-1], ignore_index=True)
     step_map.update({step_name: df_final})
 
     return step_map

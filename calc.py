@@ -487,12 +487,9 @@ def generate_coproduct_lci(
 
 # def calc(sheet_names, step_mapping):
 # def calc(lci_mapping, final_process_mapping, coprod="displacement", basis="mass"):
-def calc(overall_lci, include_incumbent=True):
+def postprocess(res):
     """
-    Calculate LCA results
-    lci_mapping: a dictionary containing the sheet names and original LCI data table.
-    coprod: coproduct handling method. Must be one of the following: "displacement", "process allocation", and "system allocation".
-    basis: the basis for allocation methods. Must be one of the following: "mass", "energy", or "value".
+    Postprocessing of the caluclated LCA results dataframe.
     """
 
     # overall_lci["End Use"] = overall_lci["End Use"].fillna("")
@@ -508,13 +505,29 @@ def calc(overall_lci, include_incumbent=True):
     # #     overall_lci.loc[overall_lci["Type"] == "Co-product", "Amount"] * -1
     # # )
 
-    res = calculate_lca(overall_lci, include_incumbent)
-    # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
+    # res = calculate_lca(overall_lci, include_incumbent)
+    # # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
     res["Resource"] = res["Resource"].str.title()
-    res.loc[res["Type"].str.contains("Co-product"), "Category"] = "Co-product Credits"
     res["Resource"] = (
-        res["Resource"].str.replace("Wwt", "WWT").str.replace("Fgd", "FGD")
+        res["Resource"]
+        .str.replace("Co2", "CO2")
+        .str.replace("Wwt", "WWT")
+        .str.replace("Fgd", "FGD")
     )
+    res.loc[res["Type"].str.contains("Co-product"), "Category"] = "Co-product Credits"
+    res.loc[
+        (res["Category"] == "Direct emissions")
+        & (res["Resource"].str.contains("Sequestration")),
+        "Category",
+    ] = "Carbon sequestration"
+    res.loc[(res["Category"] == "Direct emissions"), "Resource",] = (
+        "Other "
+        + res.loc[res["Category"] == "Direct emissions", "Resource"]
+        + " emission"
+    )
+    # res["Resource"] = (
+    #     res["Resource"].str.replace("Wwt", "WWT").str.replace("Fgd", "FGD")
+    # )
 
     return res
 

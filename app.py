@@ -18,7 +18,8 @@ import json
 from calc import (
     # generate_coproduct_lci,
     read_data,
-    calc,
+    # calc,
+    postprocess,
     generate_final_lci,
     generate_coproduct_lci,
     data_check,
@@ -31,6 +32,7 @@ from utils import (
     biorefinery_units,
     biorefinery_conversion,
     metric_units,
+    calculate_lca,
     unit_conversion,
 )
 from allocation import format_input
@@ -485,21 +487,24 @@ def quick_sensitivity(dff, renew_elec_share):
     """
     Perform sensitivity analysis for renewable electricity share
     """
-    df = dff.copy()
-    elec_df = df.loc[(df["Type"] == "Input") & (df["Resource"] == "electricity")]
-    elec_to_append = elec_df.copy()
-    elec_to_append["End Use"] = "renewable"
-    elec_to_append["Amount"] = elec_to_append["Amount"] * renew_elec_share
-    # df.loc[(df['Type']=='Input')&(df['Resource']='electricity')]
-    df.loc[
-        (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
-    ] = df.loc[
-        (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
-    ] * (
-        1 - renew_elec_share
-    )
+    if renew_elec_share == 0:
+        return dff
+    else:
+        df = dff.copy()
+        elec_df = df.loc[(df["Type"] == "Input") & (df["Resource"] == "electricity")]
+        elec_to_append = elec_df.copy()
+        elec_to_append["End Use"] = "renewable"
+        elec_to_append["Amount"] = elec_to_append["Amount"] * renew_elec_share
+        # df.loc[(df['Type']=='Input')&(df['Resource']='electricity')]
+        df.loc[
+            (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
+        ] = df.loc[
+            (df["Type"] == "Input") & (df["Resource"] == "electricity"), "Amount"
+        ] * (
+            1 - renew_elec_share
+        )
 
-    return pd.concat([df, elec_to_append], ignore_index=True)
+        return pd.concat([df, elec_to_append], ignore_index=True)
 
 
 def make_waterfall_plot(res, metric="GHG", n=4):
@@ -510,7 +515,13 @@ def make_waterfall_plot(res, metric="GHG", n=4):
     df = res.copy()
     col = metric + "_Sum"
 
-    df.loc[df[col] < 0, "Resource"] = df.loc[df[col] < 0, "Resource"].apply(
+    df.loc[
+        (df[col] < 0) & (~df["Resource"].str.lower().str.contains("sequestration")),
+        "Resource",
+    ] = df.loc[
+        (df[col] < 0) & (~df["Resource"].str.lower().str.contains("sequestration")),
+        "Resource",
+    ].apply(
         lambda x: "Disp. Credit of " + x
     )
     dfp = df[df[col] > 0].groupby("Resource", as_index=False)[col].sum()
@@ -745,14 +756,14 @@ def update_results(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping, True
             )
             overall_lci = quick_sensitivity(overall_lci, renew_elec)
-            res_new = calc(overall_lci)
+            res_new = postprocess(calculate_lca(overall_lci))
             update_status = True
             coproduct_lci = generate_coproduct_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping
             )
             if coproduct_lci is not None:
                 coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec)
-                coproduct_res = calc(coproduct_lci)
+                coproduct_res = postprocess(calculate_lca(coproduct_lci))
         else:
             data = json.loads(stored_data)
             res_new = pd.read_json(data["pd"], orient="split")
@@ -781,13 +792,13 @@ def update_results(
             lci_mapping, updated_coproduct_mapping, final_process_mapping, True
         )
         overall_lci = quick_sensitivity(overall_lci, renew_elec)
-        res_new = calc(overall_lci)
+        res_new = postprocess(calculate_lca(overall_lci))
         coproduct_lci = generate_coproduct_lci(
             lci_mapping, updated_coproduct_mapping, final_process_mapping
         )
         if coproduct_lci is not None:
             coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec)
-            coproduct_res = calc(coproduct_lci)
+            coproduct_res = postprocess(calculate_lca(coproduct_lci))
 
     lci_data = {
         key: value.to_json(orient="split", date_format="iso")
@@ -924,13 +935,13 @@ def update_results(
     Output("error_message", "children"),
     Input("results", "data"),
     Input("tabs", "active_tab"),
-    Input("renewable_elec", "value"),
+    # Input("renewable_elec", "value"),
     State("reset_status", "is_open"),
     State("update_status", "is_open"),
     State("error_status", "is_open"),
     State("error_message", "children"),
 )
-def update_figures(json_data, tab, re, rs, us, es, em):
+def update_figures(json_data, tab, rs, us, es, em):
     """
     Update the visualizations
     """
@@ -1325,7 +1336,7 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
             overall_lci = generate_final_lci(
                 lci_mapping, coproduct_mapping, final_process_mapping
             )
-            lca_res = calc(overall_lci, False)
+            lca_res = postprocess(calculate_lca(overall_lci, False))
             lca_res["FileName"] = filename.rsplit(".", 1)[0]
             df = pd.concat([df, lca_res], ignore_index=True)
 
