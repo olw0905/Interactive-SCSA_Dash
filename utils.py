@@ -34,11 +34,11 @@ metrics = [
 ]
 
 metric_units = {
-    "Total energy, Btu": "BTU",
-    "Fossil fuels, Btu": "BTU",
-    "Coal, Btu": "BTU",
-    "Natural gas, Btu": "BTU",
-    "Petroleum, Btu": "BTU",
+    "Total energy, Btu": "MJ",
+    "Fossil fuels, Btu": "MJ",
+    "Coal, Btu": "MJ",
+    "Natural gas, Btu": "MJ",
+    "Petroleum, Btu": "MJ",
     "Water consumption: gallons": "gallons",
     "VOC": "g",
     "CO": "g",
@@ -57,11 +57,11 @@ metric_units = {
 }
 
 biorefinery_units = {  # The units used to show biorefinery-level results
-    "Total energy, Btu": "mmBTU",
-    "Fossil fuels, Btu": "mmBTU",
-    "Coal, Btu": "mmBTU",
-    "Natural gas, Btu": "mmBTU",
-    "Petroleum, Btu": "mmBTU",
+    "Total energy, Btu": "MJ",
+    "Fossil fuels, Btu": "MJ",
+    "Coal, Btu": "MJ",
+    "Natural gas, Btu": "MJ",
+    "Petroleum, Btu": "MJ",
     "Water consumption: gallons": "gallons",
     "VOC": "kg",
     "CO": "kg",
@@ -80,11 +80,11 @@ biorefinery_units = {  # The units used to show biorefinery-level results
 }
 
 biorefinery_conversion = {  # The conversion used to calculate biorefinery-level results
-    "Total energy, Btu": 1000000,
-    "Fossil fuels, Btu": 1000000,
-    "Coal, Btu": 1000000,
-    "Natural gas, Btu": 1000000,
-    "Petroleum, Btu": 1000000,
+    "Total energy, Btu": 1,
+    "Fossil fuels, Btu": 1,
+    "Coal, Btu": 1,
+    "Natural gas, Btu": 1,
+    "Petroleum, Btu": 1,
     "Water consumption: gallons": 1,
     "VOC": 1000,
     "CO": 1000,
@@ -104,25 +104,25 @@ biorefinery_conversion = {  # The conversion used to calculate biorefinery-level
 
 combination_basis = {  # The basis for combinaning multiple "main products"
     "Biomass": "kg",
-    "Fuel": "mmBTU",
+    "Process fuel": "mmBTU",
     "Electricity": "mmBTU",
     "Chemicals and catalysts": "kg",
 }
 
 primary_units = {
-    "Fuel": "mmBTU",
+    "Process fuel": "mmBTU",
     "Biomass": "ton",
     "Electricity": "mmBTU",
     "Chemicals and catalysts": "g",
     "Water": "gal",
     "Transportation": "mmBTU",  # For transportation, diesel is used
     "Waste": "g",
-    "Direct emissions": "g",
+    "Emissions and sequestration": "g",
     "Other": "g",
 }  # The functional unit for calculation
 
 display_units = {
-    "Fuel": "MJ",  # gram, gal, or BTU per MJ
+    "Process fuel": "MJ",  # gram, gal, or BTU per MJ
     "Biomass": "ton",  # gram, gal, or BTU per ton
     "Electricity": "MJ",  # gram, gal, or BTU per MJ
     "Chemicals and catalysts": "g",  # gram, gal, or BTU per g
@@ -741,7 +741,17 @@ def calculate_lca(df_lci, include_incumbent=True):
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
 
-    if main_product_category in ["Fuel", "Electricity"]:
+    # Use MJ as the unit of energy metrics
+    for metric in [
+        "Total energy, Btu",
+        "Fossil fuels, Btu",
+        "Coal, Btu",
+        "Natural gas, Btu",
+        "Petroleum, Btu",
+    ]:
+        res[metric + "_Sum"] = res[metric + "_Sum"] * energy.loc["MJ", "BTU"]
+
+    if main_product_category in ["Process fuel", "Electricity"]:
         for metric in metrics:
             res[metric + "_Sum"] = (
                 res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]

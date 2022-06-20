@@ -320,6 +320,11 @@ single_file_content = [
             dbc.Tab(
                 label="Water", tab_id="Water", activeTabClassName="fw-bold fst-italic"
             ),
+            dbc.Tab(
+                label="Fossil energy",
+                tab_id="Fossil energy",
+                activeTabClassName="fw-bold fst-italic",
+            ),
             # dbc.Tab(label="N2O", tab_id="N2O", activeTabClassName="fw-bold fst-italic"),
             # dbc.Tab(label="CO2", tab_id="CO2", activeTabClassName="fw-bold fst-italic"),
             # dbc.Tab(label="CH4", tab_id="CH4", activeTabClassName="fw-bold fst-italic"),
@@ -1015,6 +1020,18 @@ def update_figures(json_data, tab, rs, us, es, em):
     if tab == "Water":
         tab = "Water consumption: gallons"
         tab_summary = "Water Consumption"
+    if tab in [
+        "Total energy",
+        # "Fossil fuels",
+        "Coal",
+        "Natural gas",
+        "Petroleum",
+    ]:
+        tab_summary = tab + " consumption"
+        tab = tab + ", Btu"
+    if tab == "Fossil energy":
+        tab_summary = tab + " consumption"
+        tab = "Fossil fuels, Btu"
     else:
         tab_summary = tab + " Emission"
 

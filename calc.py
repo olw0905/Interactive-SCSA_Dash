@@ -516,13 +516,13 @@ def postprocess(res):
     )
     res.loc[res["Type"].str.contains("Co-product"), "Category"] = "Co-product Credits"
     res.loc[
-        (res["Category"] == "Direct emissions")
+        (res["Category"] == "Emissions and sequestration")
         & (res["Resource"].str.contains("Sequestration")),
         "Category",
     ] = "Carbon sequestration"
-    res.loc[(res["Category"] == "Direct emissions"), "Resource",] = (
+    res.loc[(res["Category"] == "Emissions and sequestration"), "Resource",] = (
         "Other "
-        + res.loc[res["Category"] == "Direct emissions", "Resource"]
+        + res.loc[res["Category"] == "Emissions and sequestration", "Resource"]
         + " emission"
     )
     # res["Resource"] = (
