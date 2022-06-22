@@ -46,7 +46,7 @@ nav_item = dbc.Nav(
     [
         dbc.NavItem(html.Br(), className="d-none d-md-block"),
         dbc.NavItem(html.Br(), className="d-none d-md-block"),
-        dbc.NavItem(html.H2("SOT Pathways"), className="d-none d-md-block"),
+        dbc.NavItem(html.H2("Biofuel Pathways"), className="d-none d-md-block"),
         # dbc.NavItem(dbc.NavLink("")),
         dbc.NavItem(html.Hr(), className="d-none d-md-block"),
         dbc.NavItem(html.Br()),
@@ -232,8 +232,8 @@ single_file_content = [
                         ),
                     ],
                     color="success",
-                    inverse=True,
-                    # outline=True,
+                    # inverse=True,
+                    outline=True,
                 ),
                 # width=6,
             )
@@ -323,6 +323,21 @@ single_file_content = [
             dbc.Tab(
                 label="Fossil energy",
                 tab_id="Fossil energy",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Petroleum",
+                tab_id="Petroleum",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Coal",
+                tab_id="Coal",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Natural gas",
+                tab_id="Natural gas",
                 activeTabClassName="fw-bold fst-italic",
             ),
             # dbc.Tab(label="N2O", tab_id="N2O", activeTabClassName="fw-bold fst-italic"),
@@ -463,7 +478,10 @@ content = [
     dcc.Store(id="results"),
     dcc.Store(id="sensitivity-results"),
     html.Br(),
-    html.H1(children="SOT LCA Results", className="text-dark"),
+    html.H1(
+        children="GREET-Based Interactive Life-Cycle Assessment of BETO Biofuel Pathways",
+        className="text-dark",
+    ),
     html.H3(
         #         children="""
         #     RD Production from Corn Stover via Biochem Pathway
@@ -1020,7 +1038,7 @@ def update_figures(json_data, tab, rs, us, es, em):
     if tab == "Water":
         tab = "Water consumption: gallons"
         tab_summary = "Water Consumption"
-    if tab in [
+    elif tab in [
         "Total energy",
         # "Fossil fuels",
         "Coal",
@@ -1029,7 +1047,7 @@ def update_figures(json_data, tab, rs, us, es, em):
     ]:
         tab_summary = tab + " consumption"
         tab = tab + ", Btu"
-    if tab == "Fossil energy":
+    elif tab == "Fossil energy":
         tab_summary = tab + " consumption"
         tab = "Fossil fuels, Btu"
     else:
@@ -1047,6 +1065,9 @@ def update_figures(json_data, tab, rs, us, es, em):
         error_message = em
 
     res_new_with_incumbent = pd.read_json(data["pd"], orient="split")
+    res_new_with_incumbent = res_new_with_incumbent.loc[
+        res_new_with_incumbent[tab + "_Sum"] != 0
+    ]
     coproduct_with_incumbent = pd.read_json(data["coproduct_res"], orient="split")
 
     # res_new_with_incumbent.loc[
@@ -1063,6 +1084,7 @@ def update_figures(json_data, tab, rs, us, es, em):
     res_new = res_new_with_incumbent[
         ~res_new_with_incumbent["Pathway"].str.contains("Incumbent")
     ]
+    res_new = res_new.loc[res_new[tab + "_Sum"] != 0]
 
     main_product_total = res_new[tab + "_Sum"].sum()
     main_product_category = res_new.loc[
@@ -1085,6 +1107,7 @@ def update_figures(json_data, tab, rs, us, es, em):
         y=tab + "_Sum",
         color="Category",
         custom_data=["Category"],
+        category_orders={"Process": res_new["Process"].values},
     )
     fig2_new.update_layout(barmode="relative")
     fig2_new.update_traces(marker_line_width=0)
@@ -1171,17 +1194,30 @@ def update_figures(json_data, tab, rs, us, es, em):
     coproduct_incumbent_contribution = 0
 
     summary = [
-        html.H4(
-            f"Life-Cycle {tab_summary} of Main Product: {main_product_total:,.1f} {metric_units[tab]}/{main_product_target_unit}"
+        html.H5(
+            f"Life-Cycle {tab_summary} of Main Product: {main_product_total:,.1f} {metric_units[tab]}/{main_product_target_unit}",
+            className="text-success",
         ),
         html.Ul(
             html.Li(
-                html.H5(
-                    f"{main_diff:.0%} {main_change} compared to conventional {main_incumbent_resource}"
-                )
+                html.P(
+                    f"{main_diff:.0%} {main_change} compared to conventional {main_incumbent_resource.lower()}",
+                ),
+                className="text-success",
             )
         ),
     ]
+    if tab == "Fossil fuels, Btu":
+        summary = summary + [
+            html.Ul(
+                html.Li(
+                    html.P(
+                        f"Net energy balance: {1-main_product_total:,.1f} {metric_units[tab]}/{main_product_target_unit}"
+                    ),
+                    className="text-success",
+                )
+            ),
+        ]
     if len(coproduct_with_incumbent) > 0:
         #     coproduct_with_incumbent.loc[
         #         (coproduct_with_incumbent["Resource"] == "Electricity")
@@ -1239,17 +1275,20 @@ def update_figures(json_data, tab, rs, us, es, em):
         )
         if coproduct_total > 0:
             summary = summary + [
-                html.H4(
-                    f"\nLife-Cycle {tab_summary} of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}"
+                html.Hr(),
+                html.H5(
+                    f"\nLife-Cycle {tab_summary} of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}",
+                    className="text-danger",
                 ),
                 html.Ul(
                     [
                         html.Li(
-                            html.H5(
-                                f"{coproduct_diff:.0%} {coproduct_change} compared to conventional {coproduct_incumbent_resource}"
-                            )
+                            html.P(
+                                f"{coproduct_diff:.0%} {coproduct_change} compared to conventional {coproduct_incumbent_resource.lower()}"
+                            ),
                         )
-                    ]
+                    ],
+                    className="text-danger",
                 ),
             ]
 
@@ -1267,17 +1306,22 @@ def update_figures(json_data, tab, rs, us, es, em):
 
     if ~math.isinf(biorefinery_res):
         summary = summary + [
-            html.H4(
-                f"Biorefinery-level results: {biorefinery_res:,.1f} {biorefinery_units[tab]}/ton"
+            html.Hr(),
+            html.H5(
+                f"Biorefinery-level results: {biorefinery_res:,.1f} {biorefinery_units[tab]}/ton",
+                className="text-primary",
             ),
             html.Ul(
                 html.Li(
-                    html.H5(
+                    html.P(
                         (
-                            f"{biorefinery_diff:.0%} {biorefinery_change} compared to the incumbent products."
+                            f"{biorefinery_diff:.0%} {biorefinery_change} compared to the incumbent products"
                         )
-                    )
-                )
+                    ),
+                    className="mb-0 text-primary",
+                ),
+                # style={"margin-bottom": "0"},
+                className="mb-0",
             ),
         ]
     if (len(coproduct_with_incumbent) > 0) and show_breakdown:
@@ -1285,16 +1329,17 @@ def update_figures(json_data, tab, rs, us, es, em):
             html.Ul(
                 [
                     html.Li(
-                        html.H5(
+                        html.P(
                             f"Contribution by the main product: {main_contribution:,.1f} {biorefinery_units[tab]}/ton"
                         )
                     ),
                     html.Li(
-                        html.H5(
+                        html.P(
                             f"Contribution by the coproduct: {coproduct_contribution:,.1f} {biorefinery_units[tab]}/ton"
                         )
                     ),
-                ]
+                ],
+                className="text-primary",
             )
         ]
 

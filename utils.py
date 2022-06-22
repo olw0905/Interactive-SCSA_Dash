@@ -688,11 +688,11 @@ def calculate_lca(df_lci, include_incumbent=True):
         main_product = df_lci.loc[df_lci["Type"] == "Main Product", "Resource"].values[
             0
         ]
-        df_lci["Pathway"] = main_product + " (Modeled)"
+        df_lci["Pathway"] = main_product.title() + " (Modeled)"
 
         df_incumbent = pd.DataFrame(
             {
-                "Pathway": [incumbent_resource + " (Incumbent)"],
+                "Pathway": [incumbent_resource.title() + " (Incumbent)"],
                 "Type": ["Input"],
                 "Category": [incumbent_category],
                 "Resource": [incumbent_resource],
