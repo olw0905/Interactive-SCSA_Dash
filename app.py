@@ -513,6 +513,26 @@ sensitivity_content = [
             dbc.Tab(
                 label="Water", tab_id="Water", activeTabClassName="fw-bold fst-italic"
             ),
+            dbc.Tab(
+                label="Fossil energy",
+                tab_id="Fossil energy",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Petroleum",
+                tab_id="Petroleum",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Coal",
+                tab_id="Coal",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Natural gas",
+                tab_id="Natural gas",
+                activeTabClassName="fw-bold fst-italic",
+            ),
             # dbc.Tab(label="N2O", tab_id="N2O", activeTabClassName="fw-bold fst-italic"),
             # dbc.Tab(label="CO2", tab_id="CO2", activeTabClassName="fw-bold fst-italic"),
             # dbc.Tab(label="CH4", tab_id="CH4", activeTabClassName="fw-bold fst-italic"),
@@ -1453,7 +1473,7 @@ def update_figures(
                 html.Hr(),
                 html.H5(
                     f"\nLife-Cycle {tab_summary} of Co-Product: {coproduct_total:,.1f} {metric_units[tab]}/{coproduct_target_unit}",
-                    className="text-danger",
+                    className="text-warning",
                 ),
                 html.Ul(
                     [
@@ -1463,7 +1483,7 @@ def update_figures(
                             ),
                         )
                     ],
-                    className="text-danger",
+                    className="text-warning",
                 ),
             ]
 
