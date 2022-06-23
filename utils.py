@@ -79,6 +79,29 @@ biorefinery_units = {  # The units used to show biorefinery-level results
     "GHG": "kg",
 }
 
+abatement_cost_units = {
+    "Total energy, Btu": "MJ",
+    "Fossil fuels, Btu": "MJ",
+    "Coal, Btu": "MJ",
+    "Natural gas, Btu": "MJ",
+    "Petroleum, Btu": "MJ",
+    "Water consumption: gallons": "gallons",
+    "VOC": "metric ton",
+    "CO": "metric ton",
+    "NOx": "metric ton",
+    "PM10": "metric ton",
+    "PM2.5": "metric ton",
+    "SOx": "metric ton",
+    "BC": "metric ton",
+    "OC": "metric ton",
+    "CH4": "metric ton",
+    "N2O": "metric ton",
+    "CO2": "metric ton",
+    "Biogenic CO2": "metric ton",
+    "CO2 (w/ C in VOC & CO)": "metric ton",
+    "GHG": "metric ton",
+}
+
 biorefinery_conversion = {  # The conversion used to calculate biorefinery-level results
     "Total energy, Btu": 1,
     "Fossil fuels, Btu": 1,
@@ -164,6 +187,18 @@ mass_units = mass.columns.to_list()
 volume_units = volume.columns.to_list()
 energy_units = energy.columns.to_list()
 length_units = length.columns.to_list()
+
+potential_units = {
+    "Process fuel": energy_units + volume_units + mass_units,
+    "Biomass": mass_units,
+    "Electricity": energy_units,
+    "Chemicals and catalysts": mass_units,
+    "Water": volume_units + mass_units,
+    "Transportation": energy_units,  # For transportation, diesel is used
+    "Waste": mass_units,
+    "Emissions and sequestration": mass_units,
+    "Other": mass_units,
+}
 
 properties = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Fuel specs", skiprows=1, index_col=0

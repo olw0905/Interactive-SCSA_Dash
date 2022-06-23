@@ -26,12 +26,18 @@ from calc import (
     # calculate_allocation_ratio,
 )
 from utils import (
+    mass,
     display_units,
     # format_input,
-    energy,
+    properties,
+    potential_units,
     biorefinery_units,
     biorefinery_conversion,
     metric_units,
+    mass_units,
+    # volume_units,
+    # energy_units,
+    abatement_cost_units,
     calculate_lca,
     unit_conversion,
 )
@@ -141,6 +147,54 @@ navbar = dbc.Navbar(
     color="white",
     # expand='lg',
     # style={'width':'100%'}
+)
+
+form = dbc.Form(
+    [
+        dbc.Row(
+            [
+                dbc.Col(dbc.Label("Main product price range", id="main_price"), md=3),
+                dbc.Col(
+                    dbc.Input(placeholder="Minimum", type="number", id="bmin", value=4),
+                    md=3,
+                ),
+                dbc.Col(
+                    dbc.Input(placeholder="Maximum", type="number", id="bmax", value=8),
+                    md=3,
+                ),
+                dbc.Col(
+                    dcc.Dropdown(
+                        id="main-price-unit",
+                        placeholder="Unit",
+                    ),
+                    md=3,
+                ),
+            ]
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Label("Incumbent price range", id="incumbent_price"),
+                    md=3,
+                ),
+                dbc.Col(
+                    dbc.Input(placeholder="Minimum", type="number", id="fmin", value=2),
+                    md=3,
+                ),
+                dbc.Col(
+                    dbc.Input(placeholder="Maximum", type="number", id="fmax", value=6),
+                    md=3,
+                ),
+                dbc.Col(
+                    dcc.Dropdown(
+                        id="incumbent-price-unit",
+                        placeholder="Unit",
+                    ),
+                    md=3,
+                ),
+            ]
+        ),
+    ]
 )
 
 single_file_content = [
@@ -369,7 +423,20 @@ single_file_content = [
     dbc.Row(
         [
             dbc.Col(dcc.Graph(id="graph3"), md=6),
-            dbc.Col(dcc.Graph(id="graph4"), md=6),
+            dbc.Col(
+                [
+                    form,
+                    # dbc.Row(
+                    #     [
+                    #         dbc.Col(dbc.Input(placeholder="Price"), md=3),
+                    #         dbc.Col(dbc.Input(placeholder="Price 2"), md=3),
+                    #         dbc.Col(dcc.RangeSlider(id="range-slider", min=0, max=10, value=[3, 7]),)
+                    #     ]
+                    # ),
+                    dcc.Graph(id="graph4"),
+                ],
+                md=6,
+            ),
         ],
         style={"width": "100%"},
     ),
@@ -627,6 +694,79 @@ def make_waterfall_plot(res, metric="GHG", n=4):
     return fig
 
 
+def generate_abatement_cost(
+    fmin,
+    fmax,
+    funit,
+    bmin,
+    bmax,
+    bunit,
+    fossil_metric,
+    biofuel_metric,
+    main_product_category,
+    main_incumbent_resource,
+    main_product_resource,
+    n=5,
+):
+    """
+    Calculate the abatement cost
+    """
+    if (
+        (fmin is not None)
+        and (fmax is not None)
+        and (funit is not None)
+        and (bmin is not None)
+        and (bmax is not None)
+        and (bunit is not None)
+    ):
+        funit = funit[2:]  # remove the leading "$/"
+        bunit = bunit[2:]  # remove the leading "$/"
+        df_conversion = pd.DataFrame(
+            {
+                "Input Amount": [1, 1],
+                "Unit": [funit, bunit],
+                "Primary Unit": [display_units[main_product_category]] * 2,
+                "Resource": [main_incumbent_resource, main_product_resource],
+            }
+        )
+        df_conversion = pd.merge(
+            df_conversion, properties, left_on="Resource", right_index=True, how="left"
+        )
+        f_conversion_ratio, b_conversion_ratio = df_conversion.apply(
+            unit_conversion, axis=1
+        ).values
+
+        fossil_cost_provided = np.linspace(fmin, fmax, n)
+        fossil_cost = fossil_cost_provided / f_conversion_ratio  # price in $/MJ
+        biofuel_cost_provided = np.linspace(bmin, bmax, n)
+        biofuel_cost = biofuel_cost_provided / b_conversion_ratio  # price in $/MJ
+
+        abatement_cost = (fossil_cost - biofuel_cost.reshape(-1, 1)) / (
+            biofuel_metric - fossil_metric
+        )
+        df = pd.DataFrame(
+            abatement_cost, index=biofuel_cost_provided, columns=fossil_cost_provided
+        )
+        cols = df.columns
+        df = df.reset_index(drop=False).rename(columns={"index": "biofuel_cost"})
+        df = pd.melt(
+            df,
+            id_vars=["biofuel_cost"],
+            value_vars=cols,
+            var_name="fossil_cost",
+            value_name="abatement_cost",
+        )
+        # fig = px.line(df, x="biofuel_cost", y="abatement_cost", color="fossil_cost")
+        # return fig
+    else:
+        # fig = go.Figure()
+        # fig.update_layout(
+        #     title="Please provide price ranges to plot the abatement cost"
+        # )
+        df = pd.DataFrame()
+    return df
+
+
 @app.callback(
     Output("pathway-title", "children"),
     Input("url", "pathname"),
@@ -729,6 +869,10 @@ def toggle_navbar_collapse(n, is_open):
     Output("upload-data", "contents"),
     Output("renewable_elec", "value"),
     Output("rng_share", "value"),
+    Output("incumbent-price-unit", "options"),
+    Output("main-price-unit", "options"),
+    Output("incumbent-price-unit", "value"),
+    Output("main-price-unit", "value"),
     Input("upload-data", "contents"),
     Input("coproduct-handling", "value"),
     Input("reset-button", "n_clicks"),
@@ -1003,9 +1147,27 @@ def update_results(
         "total_biomass": total_biomass,
         "total_coproduct": total_coproduct,
     }
+    potential_price_unit = [
+        "$/" + unit for unit in potential_units[main_product_category]
+    ]
+    dorpdown_value = (
+        "$/GGE"
+        if main_product_category in ["Process fuel"]
+        else potential_price_unit[0]
+    )
 
     # return json.dumps(data_to_return), dropdown_items, None, 0
-    return json.dumps(data_to_return), dropdown_items, None, renew_elec, rng
+    return (
+        json.dumps(data_to_return),
+        dropdown_items,
+        None,
+        renew_elec,
+        rng,
+        potential_price_unit,
+        potential_price_unit,
+        dorpdown_value,
+        dorpdown_value,
+    )
 
 
 @app.callback(
@@ -1018,15 +1180,25 @@ def update_results(
     Output("update_status", "is_open"),
     Output("error_status", "is_open"),
     Output("error_message", "children"),
+    Output("main_price", "children"),
+    Output("incumbent_price", "children"),
     Input("results", "data"),
     Input("tabs", "active_tab"),
+    Input("fmin", "value"),
+    Input("fmax", "value"),
+    Input("incumbent-price-unit", "value"),
+    Input("bmin", "value"),
+    Input("bmax", "value"),
+    Input("main-price-unit", "value"),
     # Input("renewable_elec", "value"),
     State("reset_status", "is_open"),
     State("update_status", "is_open"),
     State("error_status", "is_open"),
     State("error_message", "children"),
 )
-def update_figures(json_data, tab, rs, us, es, em):
+def update_figures(
+    json_data, tab, fmin, fmax, funit, bmin, bmax, bunit, rs, us, es, em
+):
     """
     Update the visualizations
     """
@@ -1136,21 +1308,21 @@ def update_figures(json_data, tab, rs, us, es, em):
     # # fig3_new.update_xaxes(title='Process')
     # # fig3_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
-    fig4_new = px.treemap(
-        res_new,
-        path=[px.Constant("all"), "Process", "Category", "Resource"],
-        values=tab + "_Sum",
-        color="Process",
-    )
-    fig4_new.update_layout(title="Breakdown of " + tab_summary + " by Inputs")
-    # fig4_new.update_xaxes(title='Process')
-    # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
+    # fig4_new = px.treemap(
+    #     res_new,
+    #     path=[px.Constant("all"), "Process", "Category", "Resource"],
+    #     values=tab + "_Sum",
+    #     color="Process",
+    # )
+    # fig4_new.update_layout(title="Breakdown of " + tab_summary + " by Inputs")
+    # # fig4_new.update_xaxes(title='Process')
+    # # fig4_new.update_yaxes(title='GHG Emissions (g CO2e/MJ)')
 
-    # main_product_total = res_new[tab + "_Sum"].sum()
-    # main_product_category = res_new.loc[
-    #     res_new["Type"] == "Main Product", "Category"
-    # ].values[0]
-    # main_product_target_unit = display_units[main_product_category]
+    # # main_product_total = res_new[tab + "_Sum"].sum()
+    # # main_product_category = res_new.loc[
+    # #     res_new["Type"] == "Main Product", "Category"
+    # # ].values[0]
+    # # main_product_target_unit = display_units[main_product_category]
 
     main_incumbent_total = res_new_with_incumbent.loc[
         res_new_with_incumbent["Pathway"].str.contains("Incumbent"),
@@ -1160,6 +1332,9 @@ def update_figures(json_data, tab, rs, us, es, em):
     main_diff = 1 - main_product_total / main_incumbent_total
     main_change = "increase" if main_diff <= 0 else "reduction"
     main_diff = abs(main_diff)
+    main_product_resource = res_new_with_incumbent.loc[
+        res_new_with_incumbent["Type"] == "Main Product", "Resource"
+    ].values[0]
     main_incumbent_resource = res_new_with_incumbent.loc[
         res_new_with_incumbent["Pathway"].str.contains("Incumbent"), "Resource"
     ].values[0]
@@ -1343,6 +1518,45 @@ def update_figures(json_data, tab, rs, us, es, em):
             )
         ]
 
+    df = generate_abatement_cost(
+        fmin,
+        fmax,
+        funit,
+        bmin,
+        bmax,
+        bunit,
+        fossil_metric=main_incumbent_total,
+        biofuel_metric=main_product_total,
+        main_product_category=main_product_category,
+        main_incumbent_resource=main_incumbent_resource,
+        main_product_resource=main_product_resource,
+    )
+    if len(df) > 0:
+        if abatement_cost_units[tab] in mass_units:
+            df["abatement_cost"] = (
+                df["abatement_cost"] * mass.loc["g", abatement_cost_units[tab]]
+            )  # Convert $/g to $/metric ton. Other units do not need the conversion step
+        fig4_new = px.line(
+            df,
+            x="biofuel_cost",
+            y="abatement_cost",
+            color="fossil_cost",
+            labels={
+                "fossil_cost": f"{main_incumbent_resource} Price ({funit})",
+                "biofuel_cost": f"{main_product_resource} Price ({bunit})",
+                "abatement_cost": f"{tab_summary} abatement cost ($/{abatement_cost_units[tab]})",
+            },
+            title=f"{tab_summary} abatement cost",
+        )
+    else:
+        fig4_new = go.Figure()
+        fig4_new.update_layout(
+            title="Please provide price ranges to plot the abatement cost"
+        )
+
+    main_price = f"{main_product_resource} price range"
+    incumbent_price = f"{main_incumbent_resource} price range"
+
     return (
         fig1_new,
         fig2_new,
@@ -1353,6 +1567,8 @@ def update_figures(json_data, tab, rs, us, es, em):
         update_status,
         error_status,
         error_message,
+        main_price,
+        incumbent_price,
     )
 
 
