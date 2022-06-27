@@ -47,8 +47,7 @@ def read_data(lci_file):
                 header=None,
             ).squeeze()
             df = pd.read_excel(lci_file, sheet_name=sheet, skiprows=3)
-            df["Process"] = sheet
-            # df = format_input(df)
+            df["Process"] = df["Process"].fillna(method="ffill").fillna(sheet)
             lci_mapping.update({sheet: df})
             coproduct_mapping.update({sheet: coproduct})
             final_process_mapping.update({sheet: final_process})
@@ -86,9 +85,9 @@ def data_check(lci_mapping, coproduct_mapping, final_process_mapping):
         if ~df["Moisture"].fillna(0).between(0, 1).all():
             return f'Moisture content must be between 0 and 1. Please correct moisture specifications for Process "{sheet}".'
 
-        # If a resource is from another process, the previous process column must be specified and the specified process must exist
-        other_process = df.loc[df["Type"] == "Input from Another Process"]
-        source_process_specified = other_process["Previous Process"].isin(
+        # If a resource is from another stage, the previous stage column must be specified and the specified process must exist
+        other_process = df.loc[df["Type"] == "Input from Another Stage"]
+        source_process_specified = other_process["Previous Stage"].isin(
             lci_mapping.keys()
         )
         if ~(source_process_specified.all()):

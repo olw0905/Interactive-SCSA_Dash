@@ -148,54 +148,246 @@ navbar = dbc.Navbar(
     # expand='lg',
     # style={'width':'100%'}
 )
-
-form = dbc.Form(
+abatement_cost_card = dbc.Card(
     [
-        dbc.Row(
+        dbc.CardHeader("Specify the Price Range to Plot the Abatement Cost"),
+        dbc.CardBody(
             [
-                dbc.Col(dbc.Label("Main product price range", id="main_price"), md=3),
-                dbc.Col(
-                    dbc.Input(placeholder="Minimum", type="number", id="bmin", value=4),
-                    md=3,
+                dbc.Row(
+                    [
+                        dbc.Col(html.H6(""), md=3, className="text-center"),
+                        dbc.Col(html.H6("Minimum"), md=3, className="text-center"),
+                        dbc.Col(html.H6("Maximum"), md=3, className="text-center"),
+                        dbc.Col(html.H6("Unit"), md=3, className="text-center"),
+                    ],
+                    align="center",
                 ),
-                dbc.Col(
-                    dbc.Input(placeholder="Maximum", type="number", id="bmax", value=8),
-                    md=3,
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            html.H5(
+                                "Main product price range",
+                                id="main_price",
+                            ),
+                            className="text-end",
+                            md=3,
+                        ),
+                        dbc.Col(
+                            dbc.Input(
+                                placeholder="Minimum",
+                                type="number",
+                                id="bmin",
+                                value=4,
+                            ),
+                            md=3,
+                        ),
+                        dbc.Col(
+                            dbc.Input(
+                                placeholder="Maximum",
+                                type="number",
+                                id="bmax",
+                                value=8,
+                            ),
+                            md=3,
+                        ),
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="main-price-unit",
+                                placeholder="Unit",
+                            ),
+                            md=3,
+                        ),
+                    ],
+                    align="center",
+                    className="mb-2",
                 ),
-                dbc.Col(
-                    dcc.Dropdown(
-                        id="main-price-unit",
-                        placeholder="Unit",
-                    ),
-                    md=3,
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            html.H5("Incumbent price range", id="incumbent_price"),
+                            className="text-end",
+                            md=3,
+                        ),
+                        dbc.Col(
+                            dbc.Input(
+                                placeholder="Minimum",
+                                type="number",
+                                id="fmin",
+                                value=2,
+                            ),
+                            md=3,
+                        ),
+                        dbc.Col(
+                            dbc.Input(
+                                placeholder="Maximum",
+                                type="number",
+                                id="fmax",
+                                value=6,
+                            ),
+                            md=3,
+                        ),
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="incumbent-price-unit",
+                                placeholder="Unit",
+                            ),
+                            md=3,
+                        ),
+                    ],
+                    align="center",
                 ),
             ]
+            # color="secondary",
+            # outline=True,
         ),
-        dbc.Row(
-            [
-                dbc.Col(
-                    dbc.Label("Incumbent price range", id="incumbent_price"),
-                    md=3,
-                ),
-                dbc.Col(
-                    dbc.Input(placeholder="Minimum", type="number", id="fmin", value=2),
-                    md=3,
-                ),
-                dbc.Col(
-                    dbc.Input(placeholder="Maximum", type="number", id="fmax", value=6),
-                    md=3,
-                ),
-                dbc.Col(
-                    dcc.Dropdown(
-                        id="incumbent-price-unit",
-                        placeholder="Unit",
-                    ),
-                    md=3,
-                ),
-            ]
-        ),
-    ]
+    ],
+    className="mb-4",
+    color="secondary",
+    outline=True,
 )
+
+# abatement_cost_card = dbc.CardGroup(
+#     [
+#         # dbc.CardHeader("Test"),
+#         dbc.Card(
+#             [
+#                 dbc.CardHeader(dbc.Label("Main product price range", id="main_price")),
+#                 dbc.CardBody(
+#                     [
+#                         dbc.Row(
+#                             [
+#                                 # dbc.Col(dbc.Label("Main product price range", id="main_price"), md=3),
+#                                 dbc.Col(
+#                                     dbc.Input(
+#                                         placeholder="Minimum",
+#                                         type="number",
+#                                         id="bmin",
+#                                         value=4,
+#                                     ),
+#                                     md=4,
+#                                 ),
+#                                 dbc.Col(
+#                                     dbc.Input(
+#                                         placeholder="Maximum",
+#                                         type="number",
+#                                         id="bmax",
+#                                         value=8,
+#                                     ),
+#                                     md=4,
+#                                 ),
+#                                 dbc.Col(
+#                                     dcc.Dropdown(
+#                                         id="main-price-unit",
+#                                         placeholder="Unit",
+#                                     ),
+#                                     md=4,
+#                                 ),
+#                             ]
+#                         ),
+#                     ]
+#                 ),
+#             ],
+#             color="secondary",
+#             outline=True,
+#         ),
+#         dbc.Card(
+#             [
+#                 dbc.CardHeader(
+#                     dbc.Label("Incumbent price range", id="incumbent_price"),
+#                 ),
+#                 dbc.CardBody(
+#                     [
+#                         dbc.Row(
+#                             [
+#                                 # dbc.Col(
+#                                 #     dbc.Label(
+#                                 #         "Incumbent price range", id="incumbent_price"
+#                                 #     ),
+#                                 #     md=3,
+#                                 # ),
+#                                 dbc.Col(
+#                                     dbc.Input(
+#                                         placeholder="Minimum",
+#                                         type="number",
+#                                         id="fmin",
+#                                         value=2,
+#                                     ),
+#                                     md=4,
+#                                 ),
+#                                 dbc.Col(
+#                                     dbc.Input(
+#                                         placeholder="Maximum",
+#                                         type="number",
+#                                         id="fmax",
+#                                         value=6,
+#                                     ),
+#                                     md=4,
+#                                 ),
+#                                 dbc.Col(
+#                                     dcc.Dropdown(
+#                                         id="incumbent-price-unit",
+#                                         placeholder="Unit",
+#                                     ),
+#                                     md=4,
+#                                 ),
+#                             ]
+#                         ),
+#                     ]
+#                 ),
+#             ],
+#             color="secondary",
+#             outline=True,
+#         ),
+#     ],
+#     className="mb-4",
+# )
+# form = dbc.Form(
+#     [
+#         dbc.Row(
+#             [
+#                 dbc.Col(dbc.Label("Main product price range", id="main_price"), md=3),
+#                 dbc.Col(
+#                     dbc.Input(placeholder="Minimum", type="number", id="bmin", value=4),
+#                     md=3,
+#                 ),
+#                 dbc.Col(
+#                     dbc.Input(placeholder="Maximum", type="number", id="bmax", value=8),
+#                     md=3,
+#                 ),
+#                 dbc.Col(
+#                     dcc.Dropdown(
+#                         id="main-price-unit",
+#                         placeholder="Unit",
+#                     ),
+#                     md=3,
+#                 ),
+#             ]
+#         ),
+#         dbc.Row(
+#             [
+#                 dbc.Col(
+#                     dbc.Label("Incumbent price range", id="incumbent_price"),
+#                     md=3,
+#                 ),
+#                 dbc.Col(
+#                     dbc.Input(placeholder="Minimum", type="number", id="fmin", value=2),
+#                     md=3,
+#                 ),
+#                 dbc.Col(
+#                     dbc.Input(placeholder="Maximum", type="number", id="fmax", value=6),
+#                     md=3,
+#                 ),
+#                 dbc.Col(
+#                     dcc.Dropdown(
+#                         id="incumbent-price-unit",
+#                         placeholder="Unit",
+#                     ),
+#                     md=3,
+#                 ),
+#             ]
+#         ),
+#     ]
+# )
 
 single_file_content = [
     html.Br(),
@@ -367,6 +559,8 @@ single_file_content = [
         ),
         className="mb-4",
     ),
+    dbc.Row(dbc.Col(abatement_cost_card)),
+    # abatement_cost_card,
     dbc.Tabs(
         [
             dbc.Tab(label="GHG", tab_id="GHG", activeTabClassName="fw-bold fst-italic"),
@@ -425,7 +619,7 @@ single_file_content = [
             dbc.Col(dcc.Graph(id="graph3"), md=6),
             dbc.Col(
                 [
-                    form,
+                    # form,
                     # dbc.Row(
                     #     [
                     #         dbc.Col(dbc.Input(placeholder="Price"), md=3),
@@ -1566,7 +1760,7 @@ def update_figures(
                 "biofuel_cost": f"{main_product_resource} Price ({bunit})",
                 "abatement_cost": f"{tab_summary} abatement cost ($/{abatement_cost_units[tab]})",
             },
-            title=f"{tab_summary} abatement cost",
+            title=f"{tab_summary} Abatement Cost",
         )
     else:
         fig4_new = go.Figure()
@@ -1574,8 +1768,8 @@ def update_figures(
             title="Please provide price ranges to plot the abatement cost"
         )
 
-    main_price = f"{main_product_resource} price range"
-    incumbent_price = f"{main_incumbent_resource} price range"
+    main_price = f"{main_product_resource} Price"
+    incumbent_price = f"{main_incumbent_resource} Price"
 
     return (
         fig1_new,

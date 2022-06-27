@@ -525,12 +525,12 @@ def step_processing(step_map, step_name):
 
     dff = step_map[step_name].copy()
     # dff = pd.merge(dff, properties, left_on="Input", right_index=True, how="left")
-    outputs_previous = dff[dff["Type"] == "Input from Another Process"].copy()
-    dff = dff[dff["Type"] != "Input from Another Process"]
+    outputs_previous = dff[dff["Type"] == "Input from Another Stage"].copy()
+    dff = dff[dff["Type"] != "Input from Another Stage"]
     to_concat = [dff]
 
     for ind, row in outputs_previous.iterrows():
-        step = row.at["Previous Process"]
+        step = row.at["Previous Stage"]
         step_df = step_map[step]
         row["Input Amount"] = row["Amount"]
         row["Primary Unit"] = step_df.loc[
@@ -554,19 +554,19 @@ def step_processing(step_map, step_name):
 
 def used_other_process(df):
     """
-    Return whether a process used inputs from another process
+    Return whether a process used inputs from another stage
     """
-    return (df["Type"].str.contains("Input from Another Process")).any()
+    return (df["Type"].str.contains("Input from Another Stage")).any()
 
 
 def process(step_mapping, looped=False):
     """
-    Process the LCI data by converting inputs from another process to its corresponding LCI data.
+    Process the LCI data by converting inputs from another stage to its corresponding LCI data.
     """
     for key, value in step_mapping.items():
         if used_other_process(value):
-            out = value[value["Type"] == "Input from Another Process"]
-            other_processes = out["Previous Process"].values
+            out = value[value["Type"] == "Input from Another Stage"]
+            other_processes = out["Previous Stage"].values
             to_process = True
             for other_proc in other_processes:
                 if used_other_process(step_mapping[other_proc]):
