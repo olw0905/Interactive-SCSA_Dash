@@ -10,6 +10,15 @@ import pandas as pd
 # lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
 # category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
+files = {
+    "biochem": "Feedstock test2-with INL data.xlsm",
+    "sludge": "sludge HTL3.xlsm",
+    "cfp": "",
+    "cap": "",
+    "ahtl": "",
+    "idl": "",
+}
+
 metrics = [
     "Total energy, Btu",
     "Fossil fuels, Btu",

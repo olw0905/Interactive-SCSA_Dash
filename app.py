@@ -26,6 +26,7 @@ from calc import (
     # calculate_allocation_ratio,
 )
 from utils import (
+    files,
     mass,
     display_units,
     # format_input,
@@ -390,7 +391,7 @@ abatement_cost_card = dbc.Card(
 # )
 
 single_file_content = [
-    html.Br(),
+    # html.Br(),
     dbc.Alert(
         html.H4("Reset completed!", className="alert-heading"),
         id="reset_status",
@@ -421,6 +422,29 @@ single_file_content = [
         # style={"textAlign": "center"},
         dismissable=True,
         is_open=False,
+    ),
+    dbc.Row(
+        [
+            dbc.Col(
+                dbc.Button(
+                    "Download Template File",
+                    color="success",
+                    href="/test.xlsm",
+                    download="template.xlsm",
+                    external_link=True,
+                )
+            ),
+            dbc.Col(
+                dbc.Button(
+                    "Download Pathway File",
+                    id="download-pathway",
+                    color="success",
+                    external_link=True,
+                )
+            ),
+        ],
+        # justify="evenly",
+        className="text-center mb-2 mt-3",
     ),
     dbc.Row(
         [
@@ -755,12 +779,13 @@ overall_tabs = dbc.Tabs(
     ]
 )
 
+title_name = "GREET-Based Interactive Life-Cycle Assessment of BETO Biofuel Pathways"
 content = [
     dcc.Store(id="results"),
     dcc.Store(id="sensitivity-results"),
     html.Br(),
     html.H1(
-        children="GREET-Based Interactive Life-Cycle Assessment of BETO Biofuel Pathways",
+        children=title_name,
         className="text-dark",
     ),
     html.H3(
@@ -774,13 +799,131 @@ content = [
     overall_tabs,
 ]
 
-app.layout = dbc.Container(
+index_page = html.Div(  # The content of the index page
+    [
+        html.Br(),
+        html.Br(),
+        html.H1(
+            title_name,
+            # style={"textAlign": "center"},
+        ),
+        # html.Br(),
+        dbc.Nav(
+            [
+                # dbc.NavItem(html.Br(), className="d-none d-md-block"),
+                dbc.NavItem(html.Br(), className="d-none d-md-block"),
+                # dbc.NavItem(html.H2("Biofuel Pathways"), className="d-none d-md-block"),
+                # dbc.NavItem(dbc.NavLink("")),
+                dbc.NavItem(html.Hr(), className="d-none d-md-block"),
+                dbc.NavItem(html.Br()),
+                # dbc.NavItem(dbc.NavLink("Test")),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        html.H3("Biochemical Conversion"),
+                        # href="/Biochemical-Conversion",
+                        href="/Biochemical-Conversion",
+                        active="exact",
+                        external_link=True,
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        html.H3("WWT Sludge Hydrothermal Liquefaction"),
+                        href="/WWT-Sludge-Hydrothermal-Liquefaction",
+                        active="exact",
+                        external_link=True,
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        html.H3("Catalytic Fast Pyrolysis"),
+                        href="/Catalytic-Fast-Pyrolysis",
+                        active="exact",
+                        external_link=True,
+                        disabled=True,
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        html.H3("Indirect Hydrothermal Liquefaction"),
+                        href="/Indirect-Hydrothermal-Liquefaction",
+                        active="exact",
+                        external_link=True,
+                        disabled=True,
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        html.H3("Combined Algae Processing"),
+                        href="/Combined-Algae-Processing",
+                        active="exact",
+                        external_link=True,
+                        disabled=True,
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
+                        html.H3("Algae Hydrothermal Liquefaction"),
+                        href="/Algae-Hydrothermal-Liquefaction",
+                        active="exact",
+                        external_link=True,
+                        disabled=True,
+                    )
+                ),
+            ],
+            vertical="md",
+            # horizontal="center",
+            pills=True,
+            className="text-center",
+        )
+        # dbc.Card(
+        #     [
+        #         dbc.CardHeader("Table of Contents"),
+        #         dbc.CardBody(
+        #             [
+        #                 dcc.Link(
+        #                     "Biochemical Conversion", href="/Biochemical-Conversion"
+        #                 ),
+        #                 html.Br(),
+        #                 dcc.Link(
+        #                     "WWT Sludge Hydrothermal Liquefaction",
+        #                     href="/WWT-Sludge-Hydrothermal-Liquefaction",
+        #                 ),
+        #             ]
+        #         ),
+        #     ],
+        #     style={
+        #         "textAlign": "center",
+        #     },
+        # ),
+    ]
+)
+
+# The content when a pathway is selected
+pathway_page = [
+    dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")])
+]
+
+url_bar_and_content_div = dbc.Container(
     [
         dcc.Location(id="url", refresh=False),
-        dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")]),
+        html.Div(id="page-content"),
+        # dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")]),
     ],
     # fluid=True
 )
+
+app.layout = url_bar_and_content_div
+# dbc.Container(
+#     [
+#         dcc.Location(id="url", refresh=False),
+#         html.Div(id="page-content"),
+#         # dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")]),
+#     ],
+#     # fluid=True
+# )
+
+app.validation_layout = html.Div([url_bar_and_content_div, index_page, pathway_page])
 
 
 def parse_contents(contents, filename, date):
@@ -979,6 +1122,28 @@ def generate_abatement_cost(
         # )
         df = pd.DataFrame()
     return df
+
+
+@app.callback(Output("page-content", "children"), Input("url", "pathname"))
+def display_page(pathname):
+    if pathname == "/":
+        return index_page
+    else:
+        return pathway_page
+
+
+@app.callback(
+    Output("download-pathway", "href"),
+    Output("download-pathway", "download"),
+    Input("url", "pathname"),
+)
+def display_page(pathname):
+    file_to_use = files["biochem"]
+    file_name = "Biochem.xlsm"
+    if "Sludge" in pathname:
+        file_to_use = files["sludge"]
+        file_name = "Sludge HTL.xlsm"
+    return file_to_use, file_name
 
 
 @app.callback(
@@ -1218,9 +1383,11 @@ def update_results(
             reset_status = True
             renew_elec = 0
             rng = 0
-        file_to_use = "Feedstock test2-with INL data.xlsm"
+        # file_to_use = "Feedstock test2-with INL data.xlsm"
+        file_to_use = files["biochem"]
         if "Sludge" in pathname:
-            file_to_use = "sludge HTL3.xlsm"
+            # file_to_use = "sludge HTL3.xlsm"
+            file_to_use = files["sludge"]
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
             # "Feedstock test2.xlsm"
