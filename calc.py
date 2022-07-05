@@ -196,7 +196,11 @@ def allocation(df, basis="mass"):
     # allocated['Ratio'] = allocated
     allocated["Amount"] = allocated["Amount"] * allocated["Product Train"].fillna(
         "Both"
-    ).map({"Both": ratio, "Co-product": 0, "Main product": 1}).fillna(ratio)
+    ).map(
+        {"Both": ratio, "Co-product": 0, "Main product": 1, "Main Product": 1}
+    ).fillna(
+        ratio
+    )
 
     allocated = allocated[allocated["Amount"] != 0]
     allocated.loc[
@@ -290,7 +294,7 @@ def generate_final_lci(
     rd_dist_loss = 1.00004514306778
 
     if (
-        (main_product_resource == "renewable diesel")
+        ("renewable diesel" in main_product_resource)
         and ("distribution" in main_product_end_use)
         and (apply_loss_factor)
     ):
@@ -374,7 +378,12 @@ def generate_coproduct_lci_mapping(
         df.loc[df["Type"] == "Main", "Type"] = "Main Product"
 
         df["Product Train"] = df["Product Train"].map(
-            {"Both": "Both", "Co-product": "Main product", "Main product": "Co-product"}
+            {
+                "Both": "Both",
+                "Co-product": "Main product",
+                "Main product": "Co-product",
+                "Main Product": "Co-product",
+            }
         )
 
         # lci_mapping.update({final_process: df})

@@ -429,8 +429,8 @@ single_file_content = [
                 dbc.Button(
                     "Download Template File",
                     color="success",
-                    href="/test.xlsm",
-                    download="template.xlsm",
+                    href="/Data Template.xlsm",
+                    download="Data Template.xlsm",
                     external_link=True,
                 )
             ),
