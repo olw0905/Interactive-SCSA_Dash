@@ -28,6 +28,7 @@ from calc import (
 from utils import (
     files,
     mass,
+    energy,
     display_units,
     # format_input,
     properties,
@@ -237,6 +238,90 @@ abatement_cost_card = dbc.Card(
                     ],
                     align="center",
                 ),
+                dbc.Row(dbc.Col(html.Div(id="abatement-cost-summary"))),
+            ]
+            # color="secondary",
+            # outline=True,
+        ),
+    ],
+    className="mb-4",
+    color="secondary",
+    outline=True,
+)
+
+carbon_price_card = dbc.Card(
+    [
+        dbc.CardHeader("Carbon Credit"),
+        dbc.CardBody(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            html.H5(
+                                "Carbon price",
+                                id="carbon-price",
+                            ),
+                            className="text-end",
+                            md=3,
+                        ),
+                        dbc.Col(
+                            dbc.Input(
+                                # placeholder="value",
+                                type="number",
+                                id="carbon-price-value",
+                                value=200,
+                            ),
+                            md=4,
+                        ),
+                        dbc.Col(
+                            dcc.Dropdown(
+                                id="carbon-price-unit",
+                                placeholder="Unit",
+                                options=["$/" + unit for unit in mass_units],
+                                value="$/metric ton",
+                            ),
+                            md=4,
+                        ),
+                    ],
+                    align="center",
+                    className="mb-2",
+                ),
+                dbc.Row(dbc.Col(html.Div(id="carbon-credit-summary"))),
+                # dbc.Row(
+                #     [
+                #         dbc.Col(
+                #             html.H5("Incumbent price range", id="incumbent_price"),
+                #             className="text-end",
+                #             md=3,
+                #         ),
+                #         dbc.Col(
+                #             dbc.Input(
+                #                 placeholder="Minimum",
+                #                 type="number",
+                #                 id="fmin",
+                #                 value=2,
+                #             ),
+                #             md=3,
+                #         ),
+                #         dbc.Col(
+                #             dbc.Input(
+                #                 placeholder="Maximum",
+                #                 type="number",
+                #                 id="fmax",
+                #                 value=6,
+                #             ),
+                #             md=3,
+                #         ),
+                #         dbc.Col(
+                #             dcc.Dropdown(
+                #                 id="incumbent-price-unit",
+                #                 placeholder="Unit",
+                #             ),
+                #             md=3,
+                #         ),
+                #     ],
+                #     align="center",
+                # ),
             ]
             # color="secondary",
             # outline=True,
@@ -584,6 +669,7 @@ single_file_content = [
         className="mb-4",
     ),
     dbc.Row(dbc.Col(abatement_cost_card)),
+    dbc.Row(dbc.Col(carbon_price_card)),
     # abatement_cost_card,
     dbc.Tabs(
         [
@@ -1124,6 +1210,29 @@ def generate_abatement_cost(
     return df
 
 
+def generate_carbon_credit(
+    cprice, cunit, main_product_category, fossil_ghg, biofuel_ghg
+):
+    """
+    Calcualte carbon credits
+    """
+    cunit = cunit[2:]
+    cprice = (
+        cprice * mass.loc[cunit, metric_units["GHG"]]
+    )  # Calculate carbon price in $/g
+
+    fuel_credit = cprice * (
+        fossil_ghg - biofuel_ghg
+    )  # calculate carbon credit, the results are in $/MJ for fuels
+
+    if main_product_category in ["Process fuel"]:
+        fuel_credit = (
+            fuel_credit * energy.loc["MJ", "GGE"]
+        )  # calculate carbon credit in $/GGE for fuels
+
+    return fuel_credit
+
+
 @app.callback(Output("page-content", "children"), Input("url", "pathname"))
 def display_page(pathname):
     if pathname == "/":
@@ -1137,7 +1246,7 @@ def display_page(pathname):
     Output("download-pathway", "download"),
     Input("url", "pathname"),
 )
-def display_page(pathname):
+def download_files(pathname):
     file_to_use = files["biochem"]
     file_name = "Biochem.xlsm"
     if "Sludge" in pathname:
@@ -1563,6 +1672,8 @@ def update_results(
     Output("error_message", "children"),
     Output("main_price", "children"),
     Output("incumbent_price", "children"),
+    Output("abatement-cost-summary", "children"),
+    Output("carbon-credit-summary", "children"),
     Input("results", "data"),
     Input("tabs", "active_tab"),
     Input("fmin", "value"),
@@ -1571,6 +1682,8 @@ def update_results(
     Input("bmin", "value"),
     Input("bmax", "value"),
     Input("main-price-unit", "value"),
+    Input("carbon-price-value", "value"),
+    Input("carbon-price-unit", "value"),
     # Input("renewable_elec", "value"),
     State("reset_status", "is_open"),
     State("update_status", "is_open"),
@@ -1578,7 +1691,7 @@ def update_results(
     State("error_message", "children"),
 )
 def update_figures(
-    json_data, tab, fmin, fmax, funit, bmin, bmax, bunit, rs, us, es, em
+    json_data, tab, fmin, fmax, funit, bmin, bmax, bunit, cprice, cunit, rs, us, es, em
 ):
     """
     Update the visualizations
@@ -1915,7 +2028,8 @@ def update_figures(
     if len(df) > 0:
         if abatement_cost_units[tab] in mass_units:
             df["abatement_cost"] = (
-                df["abatement_cost"] * mass.loc["g", abatement_cost_units[tab]]
+                df["abatement_cost"]
+                * mass.loc[metric_units[tab], abatement_cost_units[tab]]
             )  # Convert $/g to $/metric ton. Other units do not need the conversion step
         fig4_new = px.line(
             df,
@@ -1937,6 +2051,34 @@ def update_figures(
 
     main_price = f"{main_product_resource} Price"
     incumbent_price = f"{main_incumbent_resource} Price"
+    abatement_cost_max = df["abatement_cost"].max()
+    abatement_cost_min = df["abatement_cost"].min()
+    abatement_cost_summary = [
+        html.H5(
+            f"The estimated {tab} abatement cost ranges between {abatement_cost_min:.2f} and {abatement_cost_max:.2f} $/{abatement_cost_units[tab]} (See Figure 4 for details).",
+            className="text-success mt-3",
+        ),
+    ]
+
+    if tab == "GHG":
+        credit = generate_carbon_credit(
+            cprice=cprice,
+            cunit=cunit,
+            main_product_category=main_product_category,
+            fossil_ghg=main_incumbent_total,
+            biofuel_ghg=main_product_total,
+        )
+        credit_unit = (
+            "GGE"
+            if main_product_category in ["Process fuel"]
+            else display_units[main_product_category]
+        )
+        carbon_credit_summary = html.H5(
+            f"The estimated carbon credit is ${credit:.2f}/{credit_unit}.",
+            className="text-success mt-3",
+        )
+    else:
+        carbon_credit_summary = ""
 
     return (
         fig1_new,
@@ -1950,6 +2092,8 @@ def update_figures(
         error_message,
         main_price,
         incumbent_price,
+        abatement_cost_summary,
+        carbon_credit_summary,
     )
 
 
