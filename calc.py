@@ -515,12 +515,14 @@ def postprocess(res):
 
     # res = calculate_lca(overall_lci, include_incumbent)
     # # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
+    res["Process"] = res["Process"].str.title()
     res["Resource"] = res["Resource"].str.title()
     res["Resource"] = (
         res["Resource"]
         .str.replace("Co2", "CO2")
         .str.replace("Wwt", "WWT")
         .str.replace("Fgd", "FGD")
+        .str.replace("Bdo", "BDO")
     )
     res.loc[res["Type"].str.contains("Co-product"), "Category"] = "Co-product Credits"
     res.loc[

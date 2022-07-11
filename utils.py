@@ -11,8 +11,8 @@ import pandas as pd
 # category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
 
 files = {
-    "biochem": "Biochemical conversion via BDO.xlsm",
-    "sludge": "Sludge HTL with NH3 removal.xlsm",
+    "biochem": "static/Biochemical conversion via BDO.xlsm",
+    "sludge": "static/Sludge HTL with NH3 removal.xlsm",
     "cfp": "",
     "cap": "",
     "ahtl": "",

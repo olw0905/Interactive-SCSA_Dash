@@ -258,7 +258,7 @@ carbon_price_card = dbc.Card(
                     [
                         dbc.Col(
                             html.H5(
-                                "Carbon price",
+                                "Carbon Price",
                                 id="carbon-price",
                             ),
                             className="text-end",
@@ -514,8 +514,10 @@ single_file_content = [
                 dbc.Button(
                     "Download Template File",
                     color="success",
-                    href="/Data Template.xlsm",
+                    href="/static/Data Template.xlsm",
                     download="Data Template.xlsm",
+                    # href="/static/test.txt",
+                    # download="test.txt",
                     external_link=True,
                 )
             ),
@@ -856,6 +858,7 @@ sensitivity_content = [
         active_tab="GHG",
     ),
     dcc.Graph(id="graph1-sensitivity"),
+    dcc.Graph(id="graph2-sensitivity"),
 ]
 
 overall_tabs = dbc.Tabs(
@@ -2219,6 +2222,7 @@ def update_sensitivity_results(contents, coproduct, filenames, dates, stored_dat
 
 @app.callback(
     Output("graph1-sensitivity", "figure"),
+    Output("graph2-sensitivity", "figure"),
     Output("sensitivity_error_status", "is_open"),
     Output("sensitivity_error_message", "children"),
     Input("sensitivity-results", "data"),
@@ -2279,13 +2283,36 @@ def update_sensitivity_figures(json_data, tab, es, em):
         fig1_sensitivity.update_yaxes(
             title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
         )
+
+        df2 = df.groupby("FileName", as_index=False)[tab + "_Sum"].sum()
+        df2["Relative"] = df2[tab + "_Sum"] / df2.loc[0, tab + "_Sum"]
+        df2["Change"] = df2["Relative"] - 1
+        df2["Text"] = df2["Change"].apply(
+            lambda t: "{:.1%} increase from the Base Case".format(abs(t))
+            if t >= 0
+            else "{:.1%} reduction from the Base Case".format(abs(t))
+        )
+        df2.loc[0, "Text"] = "Base Case"
+        fig2_sensitivity = px.bar(
+            df2,
+            x="FileName",
+            y="Relative",
+            text="Text"
+            # text=(df2[tab + "_Relative"] - 1).tolist()
+            # color="Category",
+            # custom_data=["Category"],
+        )
+        fig2_sensitivity.update_traces(textposition="outside")
+        fig2_sensitivity.update_layout(uniformtext_minsize=14, uniformtext_mode="show")
+
         return (
             fig1_sensitivity,
+            fig2_sensitivity,
             sensitivity_error_status,
             children,
         )
     else:
-        return go.Figure(), False, ""
+        return go.Figure(), go.Figure(), False, ""
 
 
 if __name__ == "__main__":
