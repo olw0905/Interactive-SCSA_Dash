@@ -10,6 +10,7 @@ dash = "*"
 dash-bootstrap-components = "*"
 gunicorn = "*"
 plotly = "*"
+kaleido = "*"
 
 [dev-packages]
 jupyterlab = "*"

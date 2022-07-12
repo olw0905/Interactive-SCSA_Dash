@@ -721,14 +721,32 @@ single_file_content = [
     html.Br(),
     dbc.Row(
         [
-            dbc.Col(dcc.Graph(id="graph1"), md=6),
-            dbc.Col(dcc.Graph(id="graph2"), md=6),
+            dbc.Col(
+                dcc.Graph(
+                    id="graph1",
+                    config={"toImageButtonOptions": {"filename": "Fig1", "scale": 2}},
+                ),
+                md=6,
+            ),
+            dbc.Col(
+                dcc.Graph(
+                    id="graph2",
+                    config={"toImageButtonOptions": {"filename": "Fig2", "scale": 2}},
+                ),
+                md=6,
+            ),
         ],
         style={"width": "100%"},
     ),
     dbc.Row(
         [
-            dbc.Col(dcc.Graph(id="graph3"), md=6),
+            dbc.Col(
+                dcc.Graph(
+                    id="graph3",
+                    config={"toImageButtonOptions": {"filename": "Fig3", "scale": 2}},
+                ),
+                md=6,
+            ),
             dbc.Col(
                 [
                     # form,
@@ -739,7 +757,12 @@ single_file_content = [
                     #         dbc.Col(dcc.RangeSlider(id="range-slider", min=0, max=10, value=[3, 7]),)
                     #     ]
                     # ),
-                    dcc.Graph(id="graph4"),
+                    dcc.Graph(
+                        id="graph4",
+                        config={
+                            "toImageButtonOptions": {"filename": "Fig4", "scale": 2}
+                        },
+                    ),
                 ],
                 md=6,
             ),
