@@ -353,149 +353,6 @@ carbon_price_card = dbc.Card(
 
 carbon_price_collapse = dbc.Collapse(carbon_price_card, id="collapse")
 
-# abatement_cost_card = dbc.CardGroup(
-#     [
-#         # dbc.CardHeader("Test"),
-#         dbc.Card(
-#             [
-#                 dbc.CardHeader(dbc.Label("Main product price range", id="main_price")),
-#                 dbc.CardBody(
-#                     [
-#                         dbc.Row(
-#                             [
-#                                 # dbc.Col(dbc.Label("Main product price range", id="main_price"), md=3),
-#                                 dbc.Col(
-#                                     dbc.Input(
-#                                         placeholder="Minimum",
-#                                         type="number",
-#                                         id="bmin",
-#                                         value=4,
-#                                     ),
-#                                     md=4,
-#                                 ),
-#                                 dbc.Col(
-#                                     dbc.Input(
-#                                         placeholder="Maximum",
-#                                         type="number",
-#                                         id="bmax",
-#                                         value=8,
-#                                     ),
-#                                     md=4,
-#                                 ),
-#                                 dbc.Col(
-#                                     dcc.Dropdown(
-#                                         id="main-price-unit",
-#                                         placeholder="Unit",
-#                                     ),
-#                                     md=4,
-#                                 ),
-#                             ]
-#                         ),
-#                     ]
-#                 ),
-#             ],
-#             color="secondary",
-#             outline=True,
-#         ),
-#         dbc.Card(
-#             [
-#                 dbc.CardHeader(
-#                     dbc.Label("Incumbent price range", id="incumbent_price"),
-#                 ),
-#                 dbc.CardBody(
-#                     [
-#                         dbc.Row(
-#                             [
-#                                 # dbc.Col(
-#                                 #     dbc.Label(
-#                                 #         "Incumbent price range", id="incumbent_price"
-#                                 #     ),
-#                                 #     md=3,
-#                                 # ),
-#                                 dbc.Col(
-#                                     dbc.Input(
-#                                         placeholder="Minimum",
-#                                         type="number",
-#                                         id="fmin",
-#                                         value=2,
-#                                     ),
-#                                     md=4,
-#                                 ),
-#                                 dbc.Col(
-#                                     dbc.Input(
-#                                         placeholder="Maximum",
-#                                         type="number",
-#                                         id="fmax",
-#                                         value=6,
-#                                     ),
-#                                     md=4,
-#                                 ),
-#                                 dbc.Col(
-#                                     dcc.Dropdown(
-#                                         id="incumbent-price-unit",
-#                                         placeholder="Unit",
-#                                     ),
-#                                     md=4,
-#                                 ),
-#                             ]
-#                         ),
-#                     ]
-#                 ),
-#             ],
-#             color="secondary",
-#             outline=True,
-#         ),
-#     ],
-#     className="mb-4",
-# )
-# form = dbc.Form(
-#     [
-#         dbc.Row(
-#             [
-#                 dbc.Col(dbc.Label("Main product price range", id="main_price"), md=3),
-#                 dbc.Col(
-#                     dbc.Input(placeholder="Minimum", type="number", id="bmin", value=4),
-#                     md=3,
-#                 ),
-#                 dbc.Col(
-#                     dbc.Input(placeholder="Maximum", type="number", id="bmax", value=8),
-#                     md=3,
-#                 ),
-#                 dbc.Col(
-#                     dcc.Dropdown(
-#                         id="main-price-unit",
-#                         placeholder="Unit",
-#                     ),
-#                     md=3,
-#                 ),
-#             ]
-#         ),
-#         dbc.Row(
-#             [
-#                 dbc.Col(
-#                     dbc.Label("Incumbent price range", id="incumbent_price"),
-#                     md=3,
-#                 ),
-#                 dbc.Col(
-#                     dbc.Input(placeholder="Minimum", type="number", id="fmin", value=2),
-#                     md=3,
-#                 ),
-#                 dbc.Col(
-#                     dbc.Input(placeholder="Maximum", type="number", id="fmax", value=6),
-#                     md=3,
-#                 ),
-#                 dbc.Col(
-#                     dcc.Dropdown(
-#                         id="incumbent-price-unit",
-#                         placeholder="Unit",
-#                     ),
-#                     md=3,
-#                 ),
-#             ]
-#         ),
-#     ]
-# )
-
 dropdown_items = dbc.Collapse(
     [
         dbc.Row(
@@ -516,24 +373,18 @@ dropdown_items = dbc.Collapse(
             [
                 dbc.Col(
                     html.P(
-                        id={"type": "edit-case", "index": 0},
+                        id="edit-case",
                         children="Edit Life Cycle Inventory Data",
-                        className="fst-italic fs-5 text-decoration-underline"
-                        # id={"type": "editing_case", "index": 0},
+                        className="fst-italic fs-5 text-decoration-underline",
                     )
                 ),
-                # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
             ]
         ),
-        # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
         dbc.Row(
             [
                 dbc.Col(
                     dcc.Dropdown(
-                        # list(lci_data.keys()),
-                        id={"type": "process_dropdown", "index": 0},
-                        # value=dropdown_value,
-                        # value=None,
+                        id="process_dropdown",
                     )
                 ),
                 dbc.Col(
@@ -541,32 +392,18 @@ dropdown_items = dbc.Collapse(
                         "Save",
                         color="success",
                         className="mb-3",
-                        id={"type": "save-case", "index": 0},
                         n_clicks=0,
-                        # id="save-case",
+                        id="save-case",
                     ),
                     width="auto",
                 ),
-                # dbc.Col(
-                #     dbc.Button(
-                #         "Generate results",
-                #         color="success",
-                #         className="mb-3",
-                #         id={"type": "perform-sensitivity-analysis", "index": 0},
-                #         n_clicks=0,
-                #         # id="perform-sensitivity-analysis",
-                #     ),
-                #     width="auto",
-                # ),
             ]
         ),
-        # html.Div(id={"type": "sensitivity-figs", "index": 0}),
     ],
     id="dropdown_collapse",
 )
 
 single_file_content = [
-    # html.Br(),
     dbc.Alert(
         html.H4("Reset completed!", className="alert-heading"),
         id="reset_status",
@@ -791,9 +628,6 @@ single_file_content = [
                 tab_id="Natural gas",
                 activeTabClassName="fw-bold fst-italic",
             ),
-            # dbc.Tab(label="N2O", tab_id="N2O", activeTabClassName="fw-bold fst-italic"),
-            # dbc.Tab(label="CO2", tab_id="CO2", activeTabClassName="fw-bold fst-italic"),
-            # dbc.Tab(label="CH4", tab_id="CH4", activeTabClassName="fw-bold fst-italic"),
             dbc.Tab(label="CO", tab_id="CO", activeTabClassName="fw-bold fst-italic"),
             dbc.Tab(label="SOx", tab_id="SOx", activeTabClassName="fw-bold fst-italic"),
             dbc.Tab(
@@ -880,9 +714,8 @@ single_file_content = [
                         outline=True,
                         color="success",
                         className="mb-3",
-                        id={"type": "perform-sensitivity-analysis", "index": 0},
                         n_clicks=0,
-                        # id="perform-sensitivity-analysis",
+                        id="perform-sensitivity-analysis",
                     ),
                     id="generate-results-collapse",
                 )
@@ -890,67 +723,50 @@ single_file_content = [
         ],
         className="gx-2",
     ),
-    # dbc.ButtonGroup(
-    #     [
-    #         dbc.Button(
-    #             "Add a sensitivity case",
-    #             outline=True,
-    #             color="success",
-    #             className="mb-3",
-    #             id="add-case-btn",
-    #             # className="me-0",
-    #         ),
-    #         dbc.Collapse(
-    #             dbc.Button(
-    #                 "Generate results",
-    #                 outline=True,
-    #                 color="success",
-    #                 className="mb-3",
-    #                 id={"type": "perform-sensitivity-analysis", "index": 0},
-    #                 n_clicks=0,
-    #                 # id="perform-sensitivity-analysis",
-    #             ),
-    #             id="generate-results-collapse",
-    #         ),
-    #     ],
-    # ),
-    # dbc.ButtonGroup(
-    #     [
-    #         dbc.Button(
-    #             "Generate resultsbbb",
-    #             outline=True,
-    #             color="success",
-    #             className="mb-3",
-    #             # id={"type": "perform-sensitivity-analysis", "index": 0},
-    #             n_clicks=0,
-    #             # id="perform-sensitivity-analysis",
-    #         ),
-    #         dbc.Button(
-    #             "Add a sensitivity caseaaa",
-    #             outline=True,
-    #             color="success",
-    #             className="mb-3 d-none",
-    #             id="test1",
-    #             # id="add-case-btn",
-    #             # className="me-0",
-    #         ),
-    #     ],
-    #     className="ms-5",
-    # ),
-    # html.Br(),
-    # dbc.Button("test", id="test"),
-    # dbc.Row(
-    #     [
-    #         dbc.Col(
-    #             html.H5("Cases Added:", className="mr-0 pr-0"),
-    #             width="auto",
-    #             className="mr-0 pr-0",
-    #         ),
-    #         dbc.Col(html.H5(id="existing-cases", className="text-success")),
-    #     ]
-    # ),
     html.Div(id="dropdown", children=dropdown_items),
-    dbc.Row(id={"type": "datatable", "index": 0}, className="mb-5"),
+    # dbc.Row
+    dbc.Collapse(
+        DataTable(
+            id="lci_datatable",
+            # data=df.to_dict("records"),
+            # columns=cols,
+            fixed_rows={"headers": True},
+            style_cell={
+                "minWidth": 95,
+                "maxWidth": 95,
+                "width": 95,
+                "whiteSpace": "normal",
+                "height": "auto",
+                "lineHeight": "15px",
+            },
+            style_header={
+                "backgroundColor": "rgb(210, 210, 210)",
+                "fontWeight": "bold",
+            },
+            style_data_conditional=[
+                {
+                    "if": {"row_index": "odd"},
+                    "backgroundColor": "rgb(220, 220, 220)",
+                },
+                {"if": {"column_editable": True}, "color": "blue"},
+            ],
+            style_table={
+                "height": 400,
+                "overflowX": "auto",
+            },
+            # tooltip_data=[
+            #     {
+            #         column: {"value": str(value), "type": "markdown"}
+            #         for column, value in row.items()
+            #     }
+            #     for row in df.to_dict("records")
+            # ],
+            tooltip_duration=None,
+        ),
+        # id={"type": "datatable", "index": 0},
+        className="mb-5",
+        id="datatable_collapse",
+    ),
     html.Div(id="manual-sensitivity-figs"),
 ]
 
@@ -1495,8 +1311,11 @@ def update_pathway_title(pathname):
 
 
 @app.callback(
-    Output({"type": "datatable", "index": MATCH}, "children"),
-    Input({"type": "process_dropdown", "index": MATCH}, "value"),
+    Output("lci_datatable", "data"),
+    Output("lci_datatable", "columns"),
+    Output("lci_datatable", "tooltip_data"),
+    Output("datatable_collapse", "is_open"),
+    Input("process_dropdown", "value"),
     State("results", "data"),
     State("reset_status", "is_open"),
 )
@@ -1505,7 +1324,8 @@ def show_datatable(process_to_edit, stored_data, rs):
     Generate the data table
     """
     if (process_to_edit is None) or (rs):
-        return []
+        # return pd.DataFrame().to_dict("records"), [], []
+        return None, [], [], False
     else:
         data = json.loads(stored_data)
         lci_data = data["lci"]
@@ -1513,50 +1333,20 @@ def show_datatable(process_to_edit, stored_data, rs):
             key: pd.read_json(value, orient="split") for key, value in lci_data.items()
         }
         df = lci_mapping[process_to_edit]
+        data = df.to_dict("records")
         cols = [{"id": c, "name": c, "editable": (c == "Amount")} for c in df.columns]
         for col in cols:
             if col["name"] == "Amount":
                 col["type"] = "numeric"
                 col["format"] = Format(precision=2, scheme=Scheme.decimal_or_exponent)
-        return [
-            DataTable(
-                id={"type": "lci_datatable", "index": 0},
-                data=df.to_dict("records"),
-                columns=cols,
-                fixed_rows={"headers": True},
-                style_cell={
-                    "minWidth": 95,
-                    "maxWidth": 95,
-                    "width": 95,
-                    "whiteSpace": "normal",
-                    "height": "auto",
-                    "lineHeight": "15px",
-                },
-                style_header={
-                    "backgroundColor": "rgb(210, 210, 210)",
-                    "fontWeight": "bold",
-                },
-                style_data_conditional=[
-                    {
-                        "if": {"row_index": "odd"},
-                        "backgroundColor": "rgb(220, 220, 220)",
-                    },
-                    {"if": {"column_editable": True}, "color": "blue"},
-                ],
-                style_table={
-                    "height": 400,
-                    "overflowX": "auto",
-                },
-                tooltip_data=[
-                    {
-                        column: {"value": str(value), "type": "markdown"}
-                        for column, value in row.items()
-                    }
-                    for row in df.to_dict("records")
-                ],
-                tooltip_duration=None,
-            )
+        tooltip_data = [
+            {
+                column: {"value": str(value), "type": "markdown"}
+                for column, value in row.items()
+            }
+            for row in data
         ]
+        return data, cols, tooltip_data, True
 
 
 # add callback for toggling the collapse on small screens
@@ -1578,7 +1368,6 @@ def toggle_navbar_collapse(n, is_open):
 
 @app.callback(
     Output("results", "data"),
-    # Output("dropdown", "children"),
     Output("upload-data", "contents"),
     Output("renewable_elec", "value"),
     Output("rng_share", "value"),
@@ -1589,16 +1378,14 @@ def toggle_navbar_collapse(n, is_open):
     Input("upload-data", "contents"),
     Input("coproduct-handling", "value"),
     Input("reset-button", "n_clicks"),
-    # Input("update-lci", "n_clicks"),
-    # Input({"type": "update-lci", "index": ALL}, "n_clicks"),
     Input("renewable_elec", "value"),
     Input("rng_share", "value"),
     Input("url", "pathname"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
     State("results", "data"),
-    State({"type": "lci_datatable", "index": ALL}, "data"),
-    State({"type": "process_dropdown", "index": ALL}, "value"),
+    State("lci_datatable", "data"),
+    State("process_dropdown", "value"),
 )
 def update_results(
     contents,
@@ -1670,8 +1457,8 @@ def update_results(
             rng = rng_share
 
             if "update-lci" in changed_id:
-                lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
-                dropdown_value = process_to_edit[0]
+                lci_mapping[process_to_edit] = pd.DataFrame(data_table)
+                dropdown_value = process_to_edit
                 renew_elec = 0
                 rng = 0
 
@@ -1748,56 +1535,6 @@ def update_results(
         key: value.to_json(orient="split", date_format="iso")
         for key, value in lci_mapping.items()
     }
-
-    # if uploaded:
-    # dropdown_items = [
-    #     dbc.Row(
-    #         [
-    #             dbc.Col(
-    #                 html.H5(
-    #                     id={"type": "edit-case", "index": 0},
-    #                     children="Edit Life Cycle Inventory Data",
-    #                     # id={"type": "editing_case", "index": 0},
-    #                 )
-    #             ),
-    #             # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
-    #         ]
-    #     ),
-    #     # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
-    #     dbc.Row(
-    #         [
-    #             dbc.Col(
-    #                 dcc.Dropdown(
-    #                     list(lci_mapping.keys()),
-    #                     id={"type": "process_dropdown", "index": 0},
-    #                     value=dropdown_value,
-    #                     # value=None,
-    #                 )
-    #             ),
-    #             dbc.Col(
-    #                 dbc.Button(
-    #                     "Save",
-    #                     color="success",
-    #                     className="mb-3",
-    #                     id={"type": "save-case", "index": 0},
-    #                     # id="save-case",
-    #                 ),
-    #                 width="auto",
-    #             ),
-    #             dbc.Col(
-    #                 dbc.Button(
-    #                     "Generate results",
-    #                     color="success",
-    #                     className="mb-3",
-    #                     id={"type": "perform-sensitivity-analysis", "index": 0},
-    #                     # id="perform-sensitivity-analysis",
-    #                 ),
-    #                 width="auto",
-    #             ),
-    #         ]
-    #     ),
-    #     html.Div(id={"type": "sensitivity-figs", "index": 0}),
-    # ]
 
     # Calcualte the parameters required for biorefinery-level results
     coproduct_method = coproduct_mapping[final_process]
@@ -2357,8 +2094,7 @@ def update_figures(
 
 
 @app.callback(
-    Output({"type": "edit-case", "index": ALL}, "children"),
-    # Output("case-name", "value"),
+    Output("edit-case", "children"),
     Input("add-case-name", "n_clicks"),
     State("case-name", "value"),
 )
@@ -2370,20 +2106,9 @@ def update_case_name(n1, case_name):
 
 
 @app.callback(
-    # Output("simple-sensitivity-results", "data"),
     Output("modal", "is_open"),
-    # Output("dropdown", "children"),
-    # Output({"type": "existing-cases", "index": ALL}, "children"),
     Input("add-case-btn", "n_clicks"),
     Input("add-case-name", "n_clicks"),
-    # Input({"type": "save-case", "index": ALL}, "n_clicks"),
-    # Input({"type": "perform-sensitivity-analysis", "index": ALL}, "n_clicks"),
-    # State({"type": "existing-cases", "index": ALL}, "children"),
-    # State("case-name", "value"),
-    # State("results", "data"),
-    # State("simple-sensitivity-results", "data"),
-    # State({"type": "lci_datatable", "index": ALL}, "data"),
-    # State({"type": "process_dropdown", "index": ALL}, "value"),
 )
 def add_new_case(
     n1,
@@ -2407,19 +2132,11 @@ def add_new_case(
 @app.callback(
     Output("dropdown_collapse", "is_open"),
     Output("generate-results-collapse", "is_open"),
-    Output({"type": "process_dropdown", "index": 0}, "options"),
+    Output("process_dropdown", "options"),
     Input("add-case-name", "n_clicks"),
     State("results", "data"),
-    # Input({"type": "save-case", "index": ALL}, "n_clicks"),
-    # Input({"type": "perform-sensitivity-analysis", "index": ALL}, "n_clicks"),
-    # State({"type": "existing-cases", "index": ALL}, "children"),
-    # State("case-name", "value"),
-    # State("results", "data"),
-    # State("simple-sensitivity-results", "data"),
-    # State({"type": "lci_datatable", "index": ALL}, "data"),
-    # State({"type": "process_dropdown", "index": ALL}, "value"),
 )
-def add_new_case(n1, stored_data):
+def update_dropdown_options(n1, stored_data):
     """
     Add a new case manually
     """
@@ -2432,111 +2149,18 @@ def add_new_case(n1, stored_data):
         return False, False, []
 
 
-# @app.callback(
-#     # # Output("simple-sensitivity-results", "data"),
-#     # Output("modal", "is_open"),
-#     Output({"type": "process_dropdown", "index": 0}, "options"),
-#     # Output({"type": "existing-cases", "index": ALL}, "children"),
-#     # Input("add-case-btn", "n_clicks"),
-#     Input("add-case-name", "n_clicks"),
-#     # Input({"type": "save-case", "index": ALL}, "n_clicks"),
-#     # Input({"type": "perform-sensitivity-analysis", "index": ALL}, "n_clicks"),
-#     # State({"type": "existing-cases", "index": ALL}, "children"),
-#     # State("case-name", "value"),
-#     State("results", "data"),
-#     # State("simple-sensitivity-results", "data"),
-#     # State({"type": "lci_datatable", "index": ALL}, "data"),
-#     # State({"type": "process_dropdown", "index": ALL}, "value"),
-# )
-# def show_dropdown(
-#     n1,
-#     case_name,
-#     stored_data,
-# ):
-#     """
-#     Add a new case manually
-#     """
-#     # dropdown_items = []
-#     ctx = dash.callback_context
-#     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
-#     if (
-#         (changed_id in ["add-case-name"])
-#         and (case_name is not None)
-#         and (case_name != "")
-#     ):
-#         data = json.loads(stored_data)
-#         lci_data = data["lci"]
-#         # lci_mapping = {
-#         #     key: pd.read_json(value, orient="split") for key, value in lci_data.items()
-#         # }
-#         dropdown_items = [
-#             dbc.Row(
-#                 [
-#                     dbc.Col(
-#                         html.H5(
-#                             id={"type": "edit-case", "index": 0},
-#                             children="Edit Life Cycle Inventory Data",
-#                             # id={"type": "editing_case", "index": 0},
-#                         )
-#                     ),
-#                     # dbc.Col(dbc.Button("Update", color="secondary", className="me-1", id={'type': 'update-lci', 'index': 0}))
-#                 ]
-#             ),
-#             # dbc.Row(dbc.Col(dcc.Dropdown(sheet_names, id={'type': 'process_dropdown', 'index': 0})))
-#             dbc.Row(
-#                 [
-#                     dbc.Col(
-#                         dcc.Dropdown(
-#                             list(lci_data.keys()),
-#                             id={"type": "process_dropdown", "index": 0},
-#                             # value=dropdown_value,
-#                             # value=None,
-#                         )
-#                     ),
-#                     dbc.Col(
-#                         dbc.Button(
-#                             "Save",
-#                             color="success",
-#                             className="mb-3",
-#                             id={"type": "save-case", "index": 0},
-#                             n_clicks=0,
-#                             # id="save-case",
-#                         ),
-#                         width="auto",
-#                     ),
-#                     dbc.Col(
-#                         dbc.Button(
-#                             "Generate results",
-#                             color="success",
-#                             className="mb-3",
-#                             id={"type": "perform-sensitivity-analysis", "index": 0},
-#                             n_clicks=0,
-#                             # id="perform-sensitivity-analysis",
-#                         ),
-#                         width="auto",
-#                     ),
-#                 ]
-#             ),
-#             # html.Div(id={"type": "sensitivity-figs", "index": 0}),
-#         ]
-#     return dropdown_items
-
-
 @app.callback(
     Output("simple-sensitivity-results", "data"),
-    # Output("modal", "is_open"),
     Output("existing-cases", "children"),
-    # Output("dropdown", "children"),
-    # Input("add-case-btn", "n_clicks"),
     Input("add-case-name", "n_clicks"),
-    Input({"type": "save-case", "index": ALL}, "n_clicks"),
-    Input({"type": "perform-sensitivity-analysis", "index": ALL}, "n_clicks"),
+    Input("save-case", "n_clicks"),
+    Input("perform-sensitivity-analysis", "n_clicks"),
     State("existing-cases", "children"),
     State("case-name", "value"),
     State("results", "data"),
     State("simple-sensitivity-results", "data"),
-    State({"type": "lci_datatable", "index": ALL}, "data"),
-    State({"type": "process_dropdown", "index": ALL}, "value"),
+    State("lci_datatable", "data"),
+    State("process_dropdown", "value"),
 )
 def add_case_data(
     n1,
@@ -2590,10 +2214,8 @@ def add_case_data(
                 else existing_cases + ", " + case_name
             )
 
-    elif "save-case" in changed_id:
-        sensitivity_data = json.loads(
-            quick_sens_data
-        )  # Initial load of the save-case button
+    elif changed_id in ["save-case"]:
+        sensitivity_data = json.loads(quick_sens_data)
 
         lci_data_sensitivity = sensitivity_data["lci_data"]
 
@@ -2603,16 +2225,14 @@ def add_case_data(
                 key: pd.read_json(value, orient="split")
                 for key, value in lci_data.items()
             }
-            if (process_to_edit[0] is not None) and (len(data_table) > 0):
-                lci_mapping[process_to_edit[0]] = pd.DataFrame(data_table[0])
+            if (process_to_edit is not None) and (len(data_table) > 0):
+                lci_mapping[process_to_edit] = pd.DataFrame(data_table)
                 lci_data_sensitivity[case_name] = {
                     key: value.to_json(orient="split", date_format="iso")
                     for key, value in lci_mapping.items()
                 }
 
-    elif (
-        "perform-sensitivity-analysis" in changed_id
-    ):  # Initial load of the perform-sensitivity-analysis button
+    elif changed_id in ["perform-sensitivity-analysis"]:
         sensitivity_data = json.loads(quick_sens_data)
         lci_data_sensitivity = sensitivity_data["lci_data"]
         data = json.loads(base_case_data)
@@ -2627,7 +2247,6 @@ def add_case_data(
             overall_lci = generate_final_lci(
                 lci_mapping, coproduct_mapping, final_process_mapping
             )
-            overall_lci.to_csv("test.csv", index=True)
             lca_res = postprocess(calculate_lca(overall_lci, False))
             lca_res["FileName"] = case_name
             df = pd.concat([df, lca_res], ignore_index=True)
@@ -2642,7 +2261,7 @@ def add_case_data(
 
 @app.callback(
     Output("manual-sensitivity-figs", "children"),
-    Input({"type": "perform-sensitivity-analysis", "index": ALL}, "n_clicks"),
+    Input("perform-sensitivity-analysis", "n_clicks"),
     State("tabs", "active_tab"),
     State("results", "data"),
     State("simple-sensitivity-results", "data"),
@@ -2660,7 +2279,7 @@ def manual_sensitivity_analysis(
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if "perform-sensitivity-analysis" in changed_id:
+    if changed_id in ["perform-sensitivity-analysis"]:
         data = json.loads(base_case_data)
         sensitivity_data = json.loads(quick_sens_data)
         lci_data_sensitivity = sensitivity_data["lci_data"]
@@ -2675,7 +2294,6 @@ def manual_sensitivity_analysis(
             overall_lci = generate_final_lci(
                 lci_mapping, coproduct_mapping, final_process_mapping
             )
-            overall_lci.to_csv("test.csv", index=True)
             lca_res = postprocess(calculate_lca(overall_lci, False))
             lca_res["FileName"] = case_name
             df = pd.concat([df, lca_res], ignore_index=True)
