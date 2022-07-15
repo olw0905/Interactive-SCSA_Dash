@@ -524,13 +524,14 @@ def postprocess(res):
         .str.replace("Fgd", "FGD")
         .str.replace("Bdo", "BDO")
     )
-    res["Pathway"] = (
-        res["Pathway"]
-        .str.replace("Co2", "CO2")
-        .str.replace("Wwt", "WWT")
-        .str.replace("Fgd", "FGD")
-        .str.replace("Bdo", "BDO")
-    )
+    if "Pathway" in res.columns:
+        res["Pathway"] = (
+            res["Pathway"]
+            .str.replace("Co2", "CO2")
+            .str.replace("Wwt", "WWT")
+            .str.replace("Fgd", "FGD")
+            .str.replace("Bdo", "BDO")
+        )
     res.loc[res["Type"].str.contains("Co-product"), "Category"] = "Co-product Credits"
     res.loc[
         (res["Category"] == "Emissions and sequestration")
