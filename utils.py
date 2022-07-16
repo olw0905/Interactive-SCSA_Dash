@@ -4,12 +4,6 @@
 # from json.tool import main
 import pandas as pd
 
-# from calc import calculate_allocation_ratio
-# from allocation import calculate_allocation_ratio
-
-# lookup_table = pd.read_csv("lookup_table.csv", index_col=0, header=0)
-# category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
-
 files = {
     "biochem": "static/Biochemical conversion via BDO.xlsm",
     "sludge": "static/Sludge HTL with NH3 removal.xlsm",
