@@ -9,8 +9,7 @@ import plotly.graph_objs as go
 from dash import Input, Output, State, callback, dcc, html
 from dash.dash_table.Format import Format, Scheme
 
-from allocation import format_input
-from app_utils import (
+from functions import (
     generate_abatement_cost,
     generate_carbon_credit,
     make_waterfall_plot,
@@ -25,6 +24,7 @@ from calc import (
     read_data,
 )
 from utils import (
+    format_input,
     abatement_cost_units,
     biorefinery_conversion,
     biorefinery_units,

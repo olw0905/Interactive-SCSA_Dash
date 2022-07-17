@@ -1,8 +1,5 @@
 import pandas as pd
-from utils import process, calculate_lca
-from allocation import calculate_allocation_ratio, format_input
-
-# category = pd.read_csv("category.csv", index_col=0, header=0).squeeze()
+from utils import process, calculate_allocation_ratio, format_input
 
 
 def read_data(lci_file):

@@ -344,7 +344,7 @@ dropdown_items = dbc.Collapse(
                 ),
                 dbc.Col(
                     dbc.Button(
-                        "Save",
+                        "Save Changes",
                         color="success",
                         className="mb-3",
                         n_clicks=0,
