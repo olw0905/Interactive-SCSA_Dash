@@ -17,6 +17,9 @@ app.validation_layout = html.Div([url_bar_and_content_div, index_page, pathway_p
 
 @callback(Output("page-content", "children"), Input("url", "pathname"))
 def display_page(pathname):
+    """
+    Display page content based on the URL.
+    """
     if pathname == "/":
         return index_page
     else:

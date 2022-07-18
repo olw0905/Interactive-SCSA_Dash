@@ -852,14 +852,18 @@ def update_figures(
 
 @callback(
     Output("edit-case", "children"),
+    Output("process_dropdown", "value"),
     Input("add-case-name", "n_clicks"),
     State("case-name", "value"),
 )
 def update_case_name(n1, case_name):
+    """
+    Update case name based on user input.
+    """
     if case_name is not None:
-        return [f"Edit Life Cycle Inventory Data for Case {case_name}"]
+        return f"Edit Life Cycle Inventory Data for Case {case_name}", None
     else:
-        return [""]
+        return "", None
 
 
 @callback(

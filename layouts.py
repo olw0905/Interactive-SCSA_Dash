@@ -1,3 +1,6 @@
+"""
+    Layout of the tool.
+"""
 import dash_bootstrap_components as dbc
 import numpy as np
 from dash import dcc, html
