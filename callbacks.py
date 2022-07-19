@@ -171,7 +171,7 @@ def update_results(
     updated_coproduct_mapping = {}  # The coproduct mapping used in the calculation
     final_process_mapping = {}
     data_status = "OK"
-    dropdown_value = None
+    # dropdown_value = None
     uploaded = False  # Whether a new LCI file has been uploaded
     lci_new = None
     coproduct_res = pd.DataFrame()
@@ -855,9 +855,10 @@ def update_figures(
     Output("edit-case", "children"),
     Output("process_dropdown", "value"),
     Input("add-case-name", "n_clicks"),
+    Input("perform-sensitivity-analysis", "n_clicks"),
     State("case-name", "value"),
 )
-def update_case_name(n1, case_name):
+def update_case_name(n1, n2, case_name):
     """
     Update case name based on user input.
     """
@@ -896,13 +897,17 @@ def add_new_case(
     Output("generate-results-collapse", "is_open"),
     Output("process_dropdown", "options"),
     Input("add-case-name", "n_clicks"),
+    Input("reset-button", "n_clicks"),
     State("results", "data"),
 )
-def update_dropdown_options(n1, stored_data):
+def update_dropdown_options(n1, n2, stored_data):
     """
     Add a new case manually
     """
-    if stored_data is not None:
+    ctx = dash.callback_context
+    changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if (changed_id in ["add-case-name"]) and (stored_data is not None):
         data = json.loads(stored_data)
         lci_data = data["lci"]
         options = list(lci_data.keys())
@@ -960,7 +965,7 @@ def add_case_data(
     # if changed_id in ["add-case-btn"]:
     #     is_open = True
 
-    if changed_id in ["add-case-name"]:
+    if (changed_id in ["add-case-name"]) and (quick_sens_data is not None):
         sensitivity_data = json.loads(quick_sens_data)
         lci_data_sensitivity = sensitivity_data["lci_data"]
         if (
@@ -983,7 +988,7 @@ def add_case_data(
                 else existing_cases + ", " + case_name
             )
 
-    elif changed_id in ["save-case"]:
+    elif (changed_id in ["save-case"]) and (quick_sens_data is not None):
         sensitivity_data = json.loads(quick_sens_data)
 
         lci_data_sensitivity = sensitivity_data["lci_data"]
@@ -1001,12 +1006,12 @@ def add_case_data(
                     for key, value in lci_mapping.items()
                 }
 
-    elif changed_id in [
+    elif (changed_id in [
         "perform-sensitivity-analysis",
         "renewable_elec",
         "rng_share",
         "coproduct-handling",
-    ]:
+    ]) and (quick_sens_data is not None):
         sensitivity_data = json.loads(quick_sens_data)
         lci_data_sensitivity = sensitivity_data["lci_data"]
         data = json.loads(base_case_data)
@@ -1017,6 +1022,8 @@ def add_case_data(
                 for key, value in lci_data.items()
             }
             coproduct_mapping = data["coproduct"]
+            if coproduct != "User Specification":
+                coproduct_mapping = {key: coproduct for key in coproduct_mapping}
             final_process_mapping = data["final_process"]
             overall_lci = generate_final_lci(
                 lci_mapping, coproduct_mapping, final_process_mapping
@@ -1053,7 +1060,7 @@ def manual_sensitivity_analysis(
     """
     sensitivity_data = json.loads(quick_sens_data)
     df = pd.read_json(sensitivity_data["pd"], orient="split")
-    if len(sensitivity_data) == 0:
+    if len(df) == 0:
         return []
     else:
         # df = pd.DataFrame()
