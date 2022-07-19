@@ -512,27 +512,75 @@ def update_figures(
     ].values[0]
     main_product_target_unit = display_units[main_product_category]
 
-    fig1_new = px.bar(
-        res_new_with_incumbent, x="Pathway", y=tab + "_Sum", color="Process"
+    # df_positive = res_new_with_incumbent[res_new_with_incumbent[tab + "_Sum"] > 0]
+    # df_negative = res_new_with_incumbent[res_new_with_incumbent[tab + "_Sum"] < 0]
+    # df_positive = df_positive.groupby(["Pathway", "Life-Cycle Stage"], as_index=False)[
+    #     tab + "_Sum"
+    # ].sum()
+    # df_negative = df_negative.groupby(["Pathway", "Life-Cycle Stage"], as_index=False)[
+    #     tab + "_Sum"
+    # ].sum()
+    # df_fig1 = pd.concat([df_positive, df_negative], ignore_index=True)
+
+    # fig1_new = px.bar(
+    #     df_fig1,
+    #     x="Pathway",
+    #     y=tab + "_Sum",
+    #     color="Life-Cycle Stage",
+    #     category_orders={"Pathway": res_new_with_incumbent["Pathway"].values},
+    # )
+    fig1_new = px.histogram(
+        res_new_with_incumbent,
+        x="Pathway",
+        y=tab + "_Sum",
+        color="Life-Cycle Stage",
+        category_orders={"Pathway": res_new_with_incumbent["Pathway"].values},
     )
-    fig1_new.update_layout(barmode="relative", title="Breakdown of " + tab_summary)
+    fig1_new.update_layout(
+        barmode="relative",
+        title={
+            "text": "Breakdown of " + tab_summary,
+            "y": 0.95,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+        },
+    )
     fig1_new.update_traces(marker_line_width=0)
     fig1_new.update_yaxes(
         title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
     )
 
-    fig2_new = px.bar(
+    # df_fig2 = res_new.groupby(["Life-Cycle Stage", "Category"], as_index=False)[
+    #     tab + "_Sum"
+    # ].sum()
+    # fig2_new = px.bar(
+    #     df_fig2,
+    #     x="Life-Cycle Stage",
+    #     y=tab + "_Sum",
+    #     color="Category",
+    #     custom_data=["Category"],
+    #     category_orders={"Life-Cycle Stage": res_new["Life-Cycle Stage"].values},
+    # )
+    fig2_new = px.histogram(
         res_new,
-        x="Process",
+        x="Life-Cycle Stage",
         y=tab + "_Sum",
         color="Category",
-        custom_data=["Category"],
-        category_orders={"Process": res_new["Process"].values},
+        category_orders={"Life-Cycle Stage": res_new["Life-Cycle Stage"].values},
     )
     fig2_new.update_layout(barmode="relative")
     fig2_new.update_traces(marker_line_width=0)
-    fig2_new.update_layout(title="Breakdown of " + tab_summary + " by Process")
-    fig2_new.update_xaxes(title="Process")
+    fig2_new.update_layout(
+        title={
+            "text": "Breakdown of " + tab_summary + " by Stage",
+            "y": 0.95,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+        }
+    )
+    fig2_new.update_xaxes(title="Life-Cycle Stage")
     fig2_new.update_yaxes(
         title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
     )
@@ -542,10 +590,18 @@ def update_figures(
     #     res_new,
     #     x="Resource",
     #     y="Input Amount",
-    #     color="Process",
-    #     custom_data=["Process"],
+    #     color="Life-Cycle Stage",
+    #     custom_data=["Life-Cycle Stage"],
     # )
-    fig3_new.update_layout(title="Waterfall Chart of " + tab_summary + " by Inputs")
+    fig3_new.update_layout(
+        title={
+            "text": "Waterfall Chart of " + tab_summary + " by Inputs",
+            "y": 0.95,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+        }
+    )
     # fig2_new.update_xaxes(title='Process')
     fig3_new.update_yaxes(
         title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
@@ -558,9 +614,9 @@ def update_figures(
 
     # fig4_new = px.treemap(
     #     res_new,
-    #     path=[px.Constant("all"), "Process", "Category", "Resource"],
+    #     path=[px.Constant("all"), "Life-Cycle Stage", "Category", "Resource"],
     #     values=tab + "_Sum",
-    #     color="Process",
+    #     color="Life-Cycle Stage",
     # )
     # fig4_new.update_layout(title="Breakdown of " + tab_summary + " by Inputs")
     # # fig4_new.update_xaxes(title='Process')
@@ -795,14 +851,28 @@ def update_figures(
                 "biofuel_cost": f"{main_product_resource} Price ({bunit})",
                 "abatement_cost": f"{tab_summary} abatement cost ($/{abatement_cost_units[tab]})",
             },
-            title=f"{tab_summary} Abatement Cost",
+            # title=f"{tab_summary} Abatement Cost",
+        )
+        fig4_new.update_layout(
+            title={
+                "text": f"{tab_summary} Abatement Cost",
+                "y": 0.95,
+                "x": 0.5,
+                "xanchor": "center",
+                "yanchor": "top",
+            }
         )
     else:
         fig4_new = go.Figure()
         fig4_new.update_layout(
-            title="Please provide price ranges to plot the abatement cost"
+            title={
+                "text": "Please provide price ranges to plot the abatement cost",
+                "y": 0.95,
+                "x": 0.5,
+                "xanchor": "center",
+                "yanchor": "top",
+            }
         )
-
     main_price = f"{main_product_resource} Price"
     incumbent_price = f"{main_incumbent_resource} Price"
     abatement_cost_max = df["abatement_cost"].max()
@@ -898,9 +968,10 @@ def add_new_case(
     Output("process_dropdown", "options"),
     Input("add-case-name", "n_clicks"),
     Input("reset-button", "n_clicks"),
+    Input("upload-data", "contents"),
     State("results", "data"),
 )
-def update_dropdown_options(n1, n2, stored_data):
+def update_dropdown_options(n1, n2, contents, stored_data):
     """
     Add a new case manually
     """
@@ -923,6 +994,7 @@ def update_dropdown_options(n1, n2, stored_data):
     Input("save-case", "n_clicks"),
     Input("perform-sensitivity-analysis", "n_clicks"),
     Input("reset-button", "n_clicks"),
+    Input("upload-data", "contents"),
     Input("renewable_elec", "value"),
     Input("rng_share", "value"),
     Input("coproduct-handling", "value"),
@@ -938,6 +1010,7 @@ def add_case_data(
     n2,
     n3,
     n4,
+    contents,
     renew_elec,
     rng,
     coproduct,
@@ -1006,12 +1079,15 @@ def add_case_data(
                     for key, value in lci_mapping.items()
                 }
 
-    elif (changed_id in [
-        "perform-sensitivity-analysis",
-        "renewable_elec",
-        "rng_share",
-        "coproduct-handling",
-    ]) and (quick_sens_data is not None):
+    elif (
+        changed_id
+        in [
+            "perform-sensitivity-analysis",
+            "renewable_elec",
+            "rng_share",
+            "coproduct-handling",
+        ]
+    ) and (quick_sens_data is not None):
         sensitivity_data = json.loads(quick_sens_data)
         lci_data_sensitivity = sensitivity_data["lci_data"]
         data = json.loads(base_case_data)
@@ -1032,8 +1108,8 @@ def add_case_data(
             lca_res = postprocess(calculate_lca(overall_lci, False))
             lca_res["FileName"] = case_name
             df = pd.concat([df, lca_res], ignore_index=True)
-    elif changed_id == "reset-button":
-        existing_cases = ""
+    elif changed_id in ["reset-button", "upload-data"]:
+        existing_cases = None
 
     sensitivity_data = {
         "lci_data": lci_data_sensitivity,
@@ -1112,17 +1188,30 @@ def manual_sensitivity_analysis(
         ]
         main_product_target_unit = display_units[main_product_category]
 
-        fig1_manual_sensitivity = px.bar(
+        # fig1_manual_sensitivity = px.bar(
+        #     df,
+        #     x="FileName",
+        #     y=tab + "_Sum",
+        #     color="Category",
+        #     custom_data=["Category"],
+        # )
+        fig1_manual_sensitivity = px.histogram(
             df,
             x="FileName",
             y=tab + "_Sum",
             color="Category",
-            custom_data=["Category"],
+            # custom_data=["Category"],
         )
         fig1_manual_sensitivity.update_layout(barmode="relative")
         fig1_manual_sensitivity.update_traces(marker_line_width=0)
         fig1_manual_sensitivity.update_layout(
-            title="Breakdown of " + tab_summary + " by Process"
+            title={
+                "text": "Breakdown of " + tab_summary,
+                "y": 0.95,
+                "x": 0.5,
+                "xanchor": "center",
+                "yanchor": "top",
+            }
         )
         fig1_manual_sensitivity.update_xaxes(title="Cases")
         fig1_manual_sensitivity.update_yaxes(
@@ -1132,16 +1221,20 @@ def manual_sensitivity_analysis(
         df2 = df.groupby("FileName", as_index=False)[tab + "_Sum"].sum()
         df2["Relative"] = df2[tab + "_Sum"] / df2.loc[0, tab + "_Sum"]
         df2["Change"] = df2["Relative"] - 1
-        df2["Text"] = df2["Change"].apply(
-            lambda t: "{:.1%} increase from the Base Case".format(abs(t))
-            if t >= 0
-            else "{:.1%} reduction from the Base Case".format(abs(t))
+        # df2["Text"] = df2["Change"].apply(
+        #     lambda t: "{:.1%} increase from the Base Case".format(abs(t))
+        #     if t >= 0
+        #     else "{:.1%} reduction from the Base Case".format(abs(t))
+        # )
+        df2["Text"] = df2[[tab + "_Sum", "Change"]].apply(
+            lambda t: f"{t[0]:.1f} ({t[1]:+.1%})", axis=1
         )
-        df2.loc[0, "Text"] = "Base Case"
+        df2.loc[0, "Text"] = f"{df2.loc[0, tab+'_Sum']:.1f}"
         fig2_manual_sensitivity = px.bar(
             df2,
             x="FileName",
-            y="Relative",
+            # y="Relative",
+            y=tab + "_Sum",
             text="Text",
             category_orders={"FileName": df["FileName"].values},
             labels=dict(FileName="Cases"),
@@ -1152,6 +1245,18 @@ def manual_sensitivity_analysis(
         fig2_manual_sensitivity.update_traces(textposition="outside")
         fig2_manual_sensitivity.update_layout(
             uniformtext_minsize=14, uniformtext_mode="show"
+        )
+        fig2_manual_sensitivity.update_layout(
+            title={
+                "text": f"Change in {tab_summary} Relative to the Base Case",
+                "y": 0.95,
+                "x": 0.5,
+                "xanchor": "center",
+                "yanchor": "top",
+            }
+        )
+        fig2_manual_sensitivity.update_yaxes(
+            title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
         )
         return [
             dbc.Row(
@@ -1323,17 +1428,23 @@ def update_sensitivity_figures(json_data, tab, es, em):
         ]
         main_product_target_unit = display_units[main_product_category]
 
-        fig1_sensitivity = px.bar(
+        fig1_sensitivity = px.histogram(
             df,
             x="FileName",
             y=tab + "_Sum",
             color="Category",
-            custom_data=["Category"],
+            # custom_data=["Category"],
         )
         fig1_sensitivity.update_layout(barmode="relative")
         fig1_sensitivity.update_traces(marker_line_width=0)
         fig1_sensitivity.update_layout(
-            title="Breakdown of " + tab_summary + " by Process"
+            title={
+                "text": "Breakdown of " + tab_summary,
+                "y": 0.95,
+                "x": 0.5,
+                "xanchor": "center",
+                "yanchor": "top",
+            }
         )
         fig1_sensitivity.update_xaxes(title="Cases")
         fig1_sensitivity.update_yaxes(
@@ -1343,23 +1454,41 @@ def update_sensitivity_figures(json_data, tab, es, em):
         df2 = df.groupby("FileName", as_index=False)[tab + "_Sum"].sum()
         df2["Relative"] = df2[tab + "_Sum"] / df2.loc[0, tab + "_Sum"]
         df2["Change"] = df2["Relative"] - 1
-        df2["Text"] = df2["Change"].apply(
-            lambda t: f"{abs(t):.1%} increase from the Base Case"
-            if t >= 0
-            else f"{abs(t):.1%} reduction from the Base Case"
+        # df2["Text"] = df2["Change"].apply(
+        #     lambda t: f"{abs(t):.1%} increase from the Base Case"
+        #     if t >= 0
+        #     else f"{abs(t):.1%} reduction from the Base Case"
+        # )
+        df2["Text"] = df2[[tab + "_Sum", "Change"]].apply(
+            lambda t: f"{t[0]:.1f} ({t[1]:+.1%})", axis=1
         )
-        df2.loc[0, "Text"] = "Base Case"
+        df2.loc[0, "Text"] = f"Base Case: {df2.loc[0, tab+'_Sum']:.1f}"
         fig2_sensitivity = px.bar(
             df2,
             x="FileName",
-            y="Relative",
-            text="Text"
+            # y="Relative",
+            y=tab + "_Sum",
+            text="Text",
+            category_orders={"FileName": df["FileName"].values},
+            labels=dict(FileName="Cases"),
             # text=(df2[tab + "_Relative"] - 1).tolist()
             # color="Category",
             # custom_data=["Category"],
         )
         fig2_sensitivity.update_traces(textposition="outside")
         fig2_sensitivity.update_layout(uniformtext_minsize=14, uniformtext_mode="show")
+        fig2_sensitivity.update_layout(
+            title={
+                "text": f"Change in {tab_summary} Relative to the Base Case",
+                "y": 0.95,
+                "x": 0.5,
+                "xanchor": "center",
+                "yanchor": "top",
+            }
+        )
+        fig2_sensitivity.update_yaxes(
+            title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
+        )
 
         return (
             fig1_sensitivity,

@@ -513,6 +513,13 @@ def postprocess(res):
     # res = calculate_lca(overall_lci, include_incumbent)
     # # res.loc[res['Category']!='Co-Product', 'Category'] = res.loc[res['Category']!='Co-Product', 'Resource'].map(category)
     res["Process"] = res["Process"].str.title()
+    res["Process"] = (
+        res["Process"]
+        .str.replace("Htl", "HTL")
+        .str.replace("Cfp", "CFP")
+        .str.replace("Idl", "IDL")
+        # .str.replace("Bdo", "BDO")
+    )
     res["Resource"] = res["Resource"].str.title()
     res["Resource"] = (
         res["Resource"]
@@ -529,6 +536,9 @@ def postprocess(res):
             .str.replace("Fgd", "FGD")
             .str.replace("Bdo", "BDO")
         )
+
+    res = res.rename(columns={"Process": "Life-Cycle Stage"})
+
     res.loc[res["Type"].str.contains("Co-product"), "Category"] = "Co-product Credits"
     res.loc[
         (res["Category"] == "Emissions and sequestration")
