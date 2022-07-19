@@ -15,6 +15,7 @@ from functions import (
     make_waterfall_plot,
     parse_contents,
     quick_sensitivity,
+    sensitivity_analysis,
 )
 from calc import (
     data_check,
@@ -916,6 +917,10 @@ def update_dropdown_options(n1, stored_data):
     Input("add-case-name", "n_clicks"),
     Input("save-case", "n_clicks"),
     Input("perform-sensitivity-analysis", "n_clicks"),
+    Input("reset-button", "n_clicks"),
+    Input("renewable_elec", "value"),
+    Input("rng_share", "value"),
+    Input("coproduct-handling", "value"),
     State("existing-cases", "children"),
     State("case-name", "value"),
     State("results", "data"),
@@ -927,7 +932,10 @@ def add_case_data(
     n1,
     n2,
     n3,
-    # n4,
+    n4,
+    renew_elec,
+    rng,
+    coproduct,
     existing_cases,
     case_name,
     base_case_data,
@@ -993,7 +1001,12 @@ def add_case_data(
                     for key, value in lci_mapping.items()
                 }
 
-    elif changed_id in ["perform-sensitivity-analysis"]:
+    elif changed_id in [
+        "perform-sensitivity-analysis",
+        "renewable_elec",
+        "rng_share",
+        "coproduct-handling",
+    ]:
         sensitivity_data = json.loads(quick_sens_data)
         lci_data_sensitivity = sensitivity_data["lci_data"]
         data = json.loads(base_case_data)
@@ -1008,56 +1021,63 @@ def add_case_data(
             overall_lci = generate_final_lci(
                 lci_mapping, coproduct_mapping, final_process_mapping
             )
+            overall_lci = quick_sensitivity(overall_lci, renew_elec, rng)
             lca_res = postprocess(calculate_lca(overall_lci, False))
             lca_res["FileName"] = case_name
             df = pd.concat([df, lca_res], ignore_index=True)
+    elif changed_id == "reset-button":
+        existing_cases = ""
 
     sensitivity_data = {
         "lci_data": lci_data_sensitivity,
         "pd": df.to_json(date_format="iso", orient="split"),
     }
-
     return json.dumps(sensitivity_data), existing_cases
 
 
 @callback(
     Output("manual-sensitivity-figs", "children"),
-    Input("perform-sensitivity-analysis", "n_clicks"),
-    State("tabs", "active_tab"),
-    State("results", "data"),
-    State("simple-sensitivity-results", "data"),
+    Input("simple-sensitivity-results", "data"),
+    Input("tabs", "active_tab"),
+    # Input("coproduct-handling", "value"),
+    # State("results", "data"),
 )
 def manual_sensitivity_analysis(
-    n1,
-    tab,
-    base_case_data,
     quick_sens_data,
+    tab,
+    # base_case_data,
+    # quick_sens_data,
 ):
     """
     Manual sensitivity analysis
     """
-    df = pd.DataFrame()
-    ctx = dash.callback_context
-    changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    sensitivity_data = json.loads(quick_sens_data)
+    df = pd.read_json(sensitivity_data["pd"], orient="split")
+    if len(sensitivity_data) == 0:
+        return []
+    else:
+        # df = pd.DataFrame()
+        # ctx = dash.callback_context
+        # changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if changed_id in ["perform-sensitivity-analysis"]:
-        data = json.loads(base_case_data)
-        sensitivity_data = json.loads(quick_sens_data)
-        lci_data_sensitivity = sensitivity_data["lci_data"]
-        for case_name in sensitivity_data["lci_data"]:
-            lci_data = lci_data_sensitivity[case_name]
-            lci_mapping = {
-                key: pd.read_json(value, orient="split")
-                for key, value in lci_data.items()
-            }
-            coproduct_mapping = data["coproduct"]
-            final_process_mapping = data["final_process"]
-            overall_lci = generate_final_lci(
-                lci_mapping, coproduct_mapping, final_process_mapping
-            )
-            lca_res = postprocess(calculate_lca(overall_lci, False))
-            lca_res["FileName"] = case_name
-            df = pd.concat([df, lca_res], ignore_index=True)
+        # if changed_id in ["perform-sensitivity-analysis"]:
+        #     data = json.loads(base_case_data)
+        #     sensitivity_data = json.loads(quick_sens_data)
+        #     lci_data_sensitivity = sensitivity_data["lci_data"]
+        #     for case_name in sensitivity_data["lci_data"]:
+        #         lci_data = lci_data_sensitivity[case_name]
+        #         lci_mapping = {
+        #             key: pd.read_json(value, orient="split")
+        #             for key, value in lci_data.items()
+        #         }
+        #         coproduct_mapping = data["coproduct"]
+        #         final_process_mapping = data["final_process"]
+        #         overall_lci = generate_final_lci(
+        #             lci_mapping, coproduct_mapping, final_process_mapping
+        #         )
+        #         lca_res = postprocess(calculate_lca(overall_lci, False))
+        #         lca_res["FileName"] = case_name
+        #         df = pd.concat([df, lca_res], ignore_index=True)
 
         unit_sup = " CO2e" if tab == "GHG" else ""
         if tab == "Water":
@@ -1078,123 +1098,82 @@ def manual_sensitivity_analysis(
         else:
             tab_summary = tab + " Emission"
 
-        if len(df) > 0:
-            df = df.loc[df[tab + "_Sum"] != 0]
-            main_product_category = df.loc[
-                df["Type"] == "Main Product", "Category"
-            ].values[0]
-            main_product_target_unit = display_units[main_product_category]
+        # if len(df) > 0:
+        df = df.loc[df[tab + "_Sum"] != 0]
+        main_product_category = df.loc[df["Type"] == "Main Product", "Category"].values[
+            0
+        ]
+        main_product_target_unit = display_units[main_product_category]
 
-            fig1_manual_sensitivity = px.bar(
-                df,
-                x="FileName",
-                y=tab + "_Sum",
-                color="Category",
-                custom_data=["Category"],
-            )
-            fig1_manual_sensitivity.update_layout(barmode="relative")
-            fig1_manual_sensitivity.update_traces(marker_line_width=0)
-            fig1_manual_sensitivity.update_layout(
-                title="Breakdown of " + tab_summary + " by Process"
-            )
-            fig1_manual_sensitivity.update_xaxes(title="Cases")
-            fig1_manual_sensitivity.update_yaxes(
-                title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
-            )
-
-            df2 = df.groupby("FileName", as_index=False)[tab + "_Sum"].sum()
-            df2["Relative"] = df2[tab + "_Sum"] / df2.loc[0, tab + "_Sum"]
-            df2["Change"] = df2["Relative"] - 1
-            df2["Text"] = df2["Change"].apply(
-                lambda t: "{:.1%} increase from the Base Case".format(abs(t))
-                if t >= 0
-                else "{:.1%} reduction from the Base Case".format(abs(t))
-            )
-            df2.loc[0, "Text"] = "Base Case"
-            fig2_manual_sensitivity = px.bar(
-                df2,
-                x="FileName",
-                y="Relative",
-                text="Text",
-                category_orders={"FileName": df["FileName"].values},
-                labels=dict(FileName="Cases"),
-                # text=(df2[tab + "_Relative"] - 1).tolist()
-                # color="Category",
-                # custom_data=["Category"],
-            )
-            fig2_manual_sensitivity.update_traces(textposition="outside")
-            fig2_manual_sensitivity.update_layout(
-                uniformtext_minsize=14, uniformtext_mode="show"
-            )
-            return [
-                dbc.Row(
-                    dbc.Col(
-                        dcc.Graph(
-                            config={
-                                "toImageButtonOptions": {
-                                    "filename": "Sensitivity-fig3",
-                                    "scale": 2,
-                                }
-                            },
-                            figure=fig1_manual_sensitivity,
-                        )
-                    )
-                ),
-                dbc.Row(
-                    dbc.Col(
-                        dcc.Graph(
-                            config={
-                                "toImageButtonOptions": {
-                                    "filename": "Sensitivity-fig4",
-                                    "scale": 2,
-                                }
-                            },
-                            figure=fig2_manual_sensitivity,
-                        )
-                    )
-                ),
-            ]
-    return []
-
-
-def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
-    """
-    Calcualte LCA results for multiple LCI files
-    """
-    if list_of_contents is not None:
-        df = pd.DataFrame()
-        coproduct_mapping_sensitivity = {}
-        final_process_sensitivity = {}
-        lci_data_sensitivity = {}
-        file_error_sensitivity = {}
-
-        for content, filename, date in zip(
-            list_of_contents, list_of_names, list_of_dates
-        ):
-            lci_file = parse_contents(content, filename, date)
-            if not isinstance(lci_file, str):
-                lci_mapping, coproduct_mapping, final_process_mapping = read_data(
-                    lci_file
-                )
-
-                coproduct_mapping_sensitivity.update({filename: coproduct_mapping})
-                final_process_sensitivity.update({filename: final_process_mapping})
-
-                lci_data = {
-                    key: value.to_json(orient="split", date_format="iso")
-                    for key, value in lci_mapping.items()
-                }
-                lci_data_sensitivity.update({filename: lci_data})
-            else:
-                file_error_sensitivity.update({filename: lci_file})
-
-        return (
-            coproduct_mapping_sensitivity,
-            final_process_sensitivity,
-            lci_data_sensitivity,
-            file_error_sensitivity,  # Stores the uploaded files that are in a unsupported format
+        fig1_manual_sensitivity = px.bar(
+            df,
+            x="FileName",
+            y=tab + "_Sum",
+            color="Category",
+            custom_data=["Category"],
         )
-    return {}, {}, {}, {}
+        fig1_manual_sensitivity.update_layout(barmode="relative")
+        fig1_manual_sensitivity.update_traces(marker_line_width=0)
+        fig1_manual_sensitivity.update_layout(
+            title="Breakdown of " + tab_summary + " by Process"
+        )
+        fig1_manual_sensitivity.update_xaxes(title="Cases")
+        fig1_manual_sensitivity.update_yaxes(
+            title=f"{tab_summary} ({metric_units[tab]}{unit_sup}/{main_product_target_unit})"
+        )
+
+        df2 = df.groupby("FileName", as_index=False)[tab + "_Sum"].sum()
+        df2["Relative"] = df2[tab + "_Sum"] / df2.loc[0, tab + "_Sum"]
+        df2["Change"] = df2["Relative"] - 1
+        df2["Text"] = df2["Change"].apply(
+            lambda t: "{:.1%} increase from the Base Case".format(abs(t))
+            if t >= 0
+            else "{:.1%} reduction from the Base Case".format(abs(t))
+        )
+        df2.loc[0, "Text"] = "Base Case"
+        fig2_manual_sensitivity = px.bar(
+            df2,
+            x="FileName",
+            y="Relative",
+            text="Text",
+            category_orders={"FileName": df["FileName"].values},
+            labels=dict(FileName="Cases"),
+            # text=(df2[tab + "_Relative"] - 1).tolist()
+            # color="Category",
+            # custom_data=["Category"],
+        )
+        fig2_manual_sensitivity.update_traces(textposition="outside")
+        fig2_manual_sensitivity.update_layout(
+            uniformtext_minsize=14, uniformtext_mode="show"
+        )
+        return [
+            dbc.Row(
+                dbc.Col(
+                    dcc.Graph(
+                        config={
+                            "toImageButtonOptions": {
+                                "filename": "Sensitivity-fig3",
+                                "scale": 2,
+                            }
+                        },
+                        figure=fig1_manual_sensitivity,
+                    )
+                )
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Graph(
+                        config={
+                            "toImageButtonOptions": {
+                                "filename": "Sensitivity-fig4",
+                                "scale": 2,
+                            }
+                        },
+                        figure=fig2_manual_sensitivity,
+                    )
+                )
+            ),
+        ]
 
 
 @callback(

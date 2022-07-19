@@ -227,3 +227,43 @@ def generate_carbon_credit(
         )  # calculate carbon credit in $/GGE for fuels
 
     return fuel_credit
+
+
+def sensitivity_analysis(list_of_contents, list_of_names, list_of_dates):
+    """
+    Calcualte LCA results for multiple LCI files
+    """
+    if list_of_contents is not None:
+        df = pd.DataFrame()
+        coproduct_mapping_sensitivity = {}
+        final_process_sensitivity = {}
+        lci_data_sensitivity = {}
+        file_error_sensitivity = {}
+
+        for content, filename, date in zip(
+            list_of_contents, list_of_names, list_of_dates
+        ):
+            lci_file = parse_contents(content, filename, date)
+            if not isinstance(lci_file, str):
+                lci_mapping, coproduct_mapping, final_process_mapping = read_data(
+                    lci_file
+                )
+
+                coproduct_mapping_sensitivity.update({filename: coproduct_mapping})
+                final_process_sensitivity.update({filename: final_process_mapping})
+
+                lci_data = {
+                    key: value.to_json(orient="split", date_format="iso")
+                    for key, value in lci_mapping.items()
+                }
+                lci_data_sensitivity.update({filename: lci_data})
+            else:
+                file_error_sensitivity.update({filename: lci_file})
+
+        return (
+            coproduct_mapping_sensitivity,
+            final_process_sensitivity,
+            lci_data_sensitivity,
+            file_error_sensitivity,  # Stores the uploaded files that are in a unsupported format
+        )
+    return {}, {}, {}, {}
