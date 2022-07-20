@@ -5,8 +5,14 @@
 import pandas as pd
 
 files = {
-    "biochem": "static/Biochemical conversion via BDO.xlsm",
-    "sludge": "static/Sludge HTL with NH3 removal.xlsm",
+    "biochem": [
+        "static/Biochemical conversion via BDO.xlsm",
+        "static/Biochemical conversion via Acids.xlsm",
+    ],
+    "sludge": [
+        "static/Sludge HTL with NH3 removal.xlsm",
+        "static/Sludge HTL without NH3 removal.xlsm",
+    ],
     "cfp": "",
     "cap": "",
     "ahtl": "",
@@ -583,6 +589,7 @@ def process(step_mapping, looped=False):
         else:
             pass
     return step_mapping
+
 
 def calculate_allocation_ratio(df, basis="mass"):
     """

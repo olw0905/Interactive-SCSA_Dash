@@ -393,31 +393,31 @@ single_file_content = [
         dismissable=True,
         is_open=False,
     ),
-    dbc.Row(
-        [
-            dbc.Col(
-                dbc.Button(
-                    "Download Template File",
-                    color="success",
-                    href="/static/Data Template.xlsm",
-                    download="Data Template.xlsm",
-                    # href="/static/test.txt",
-                    # download="test.txt",
-                    external_link=True,
-                )
-            ),
-            dbc.Col(
-                dbc.Button(
-                    "Download Pathway File",
-                    id="download-pathway",
-                    color="success",
-                    external_link=True,
-                )
-            ),
-        ],
-        # justify="evenly",
-        className="text-center mb-2 mt-3",
-    ),
+    # dbc.Row(
+    #     [
+    #         dbc.Col(
+    #             dbc.Button(
+    #                 "Download Template File",
+    #                 color="success",
+    #                 href="/static/Data Template.xlsm",
+    #                 download="Data Template.xlsm",
+    #                 # href="/static/test.txt",
+    #                 # download="test.txt",
+    #                 external_link=True,
+    #             )
+    #         ),
+    #         dbc.Col(
+    #             dbc.Button(
+    #                 "Download Pathway File",
+    #                 id="download-pathway",
+    #                 color="success",
+    #                 external_link=True,
+    #             )
+    #         ),
+    #     ],
+    #     # justify="evenly",
+    #     className="text-center mb-2 mt-3",
+    # ),
     dbc.Row(
         [
             dbc.Col(
@@ -457,6 +457,56 @@ single_file_content = [
             ),
         ],
         className="mb-3",
+    ),
+    dbc.Collapse(
+        [
+            # dbc.Label("Choose Scenario"),
+            dbc.Card(
+                [
+                    dbc.CardHeader("Choose Scenario"),
+                    dbc.CardBody(
+                        dbc.RadioItems(
+                            # options=[
+                            #     {"label": "", "value": 1},
+                            #     {"label": "Option 2", "value": 2},
+                            #     {"label": "Disabled Option", "value": 3, "disabled": True},
+                            # ],
+                            # value=1,
+                            inline=True,
+                            id="scenario-radioitems",
+                            labelCheckedClassName="text-primary",
+                            inputCheckedClassName="border border-primary bg-primary",
+                            className="text-center",
+                        )
+                    ),
+                ],
+                color="secondary",
+                # inverse=True,
+                outline=True,
+            ),
+            # dbc.Accordion(
+            #     dbc.AccordionItem(
+            #         [
+            #             dbc.RadioItems(
+            #                 # options=[
+            #                 #     {"label": "", "value": 1},
+            #                 #     {"label": "Option 2", "value": 2},
+            #                 #     {"label": "Disabled Option", "value": 3, "disabled": True},
+            #                 # ],
+            #                 # value=1,
+            #                 inline=True,
+            #                 id="scenario-radioitems",
+            #                 labelCheckedClassName="text-success",
+            #                 inputCheckedClassName="border border-success bg-success",
+            #             )
+            #         ],
+            #         title="Choose Scenario",
+            #     ),
+            #     flush=True,
+            # ),
+        ],
+        id="scenario-collapse",
+        className="mb-4",
     ),
     dbc.Row(
         [
@@ -862,15 +912,48 @@ content = [
         children=title_name,
         className="text-dark",
     ),
-    html.H3(
-        #         children="""
-        #     RD Production from Corn Stover via Biochem Pathway
-        # """,
-        className="text-muted text-decoration-underline",
-        id="pathway-title",
+    dbc.Row(
+        [
+            dbc.Col(
+                html.H3(
+                    #         children="""
+                    #     RD Production from Corn Stover via Biochem Pathway
+                    # """,
+                    className="text-muted text-decoration-underline",
+                    id="pathway-title",
+                )
+            ),
+            dbc.Col(
+                dbc.Button(
+                    "Download LCI File",
+                    id="download-pathway",
+                    color="success",
+                    external_link=True,
+                    # className="me-2",
+                    # size="lg",
+                ),
+                width="auto",
+            ),
+        ],
+        align="center",
     ),
     html.Hr(),
     overall_tabs,
+    # dbc.Row(
+    #     [
+    #         dbc.Col(overall_tabs),
+    #         dbc.Col(
+    #             dbc.Button(
+    #                 "Download Pathway File",
+    #                 id="download-pathway",
+    #                 color="success",
+    #                 external_link=True,
+    #                 className="me-4",
+    #             ),
+    #             width="auto",
+    #         ),
+    #     ]
+    # ),
 ]
 
 index_page = html.Div(  # The content of the index page

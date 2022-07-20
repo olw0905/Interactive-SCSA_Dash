@@ -44,28 +44,57 @@ from utils import (
     Output("download-pathway", "href"),
     Output("download-pathway", "download"),
     Input("url", "pathname"),
+    Input("scenario-radioitems", "value"),
 )
-def download_files(pathname):
-    file_to_use = files["biochem"]
-    file_name = "Biochem.xlsm"
-    if "Sludge" in pathname:
-        file_to_use = files["sludge"]
-        file_name = "Sludge HTL.xlsm"
+def download_files(pathname, value):
+    file_to_use = ""
+    file_name = ""
+    if "Biochemical" in pathname:
+        file_to_use = files["biochem"][value]
+        file_name = "Biochem-BDO.xlsm" if value == 0 else "Biochem-Acids.xlsm"
+    elif "Sludge" in pathname:
+        file_to_use = files["sludge"][value]
+        file_name = (
+            "Sludge HTL_without NH3 removal.xlsm"
+            if value == 0
+            else "Sludge HTL_with NH3 removal.xlsm"
+        )
     return file_to_use, file_name
 
 
 @callback(
     Output("pathway-title", "children"),
+    Output("scenario-radioitems", "options"),
+    Output("scenario-radioitems", "value"),
+    Output("scenario-collapse", "is_open"),
     Input("url", "pathname"),
 )
 def update_pathway_title(pathname):
     """
     Update the pathway title
     """
-    pathway_title = "RD Production from Corn Stover via Biochemical Conversion"
+    is_open = False
+    options = []
+    value = None
+    pathway_tile = "In development"
+
+    if "Biochemical" in pathname:
+        pathway_title = "RD Production from Corn Stover via Biochemical Conversion"
+        options = [
+            {"label": "via BDO", "value": 0},
+            {"label": "via Acids", "value": 1},
+        ]
+        value = 0
+        is_open = True
     if "Sludge" in pathname:
         pathway_title = "RD Production from WWTP's Sludge via Hydrothermal Liquefaction"
-    return pathway_title
+        options = [
+            {"label": "with Ammonia Removal", "value": 0},
+            {"label": "without Ammonia Removal", "value": 1},
+        ]
+        value = 1
+        is_open = True
+    return pathway_title, options, value, is_open
 
 
 @callback(
@@ -139,6 +168,7 @@ def toggle_navbar_collapse(n, is_open):
     Input("renewable_elec", "value"),
     Input("rng_share", "value"),
     Input("url", "pathname"),
+    Input("scenario-radioitems", "value"),
     State("upload-data", "filename"),
     State("upload-data", "last_modified"),
     State("results", "data"),
@@ -153,6 +183,7 @@ def update_results(
     renewable_elec_share,
     rng_share,
     pathname,
+    value,
     filename,
     date,
     stored_data,
@@ -262,11 +293,13 @@ def update_results(
             reset_status = True
             renew_elec = 0
             rng = 0
+        file_to_use = ""
         # file_to_use = "Feedstock test2-with INL data.xlsm"
-        file_to_use = files["biochem"]
-        if "Sludge" in pathname:
+        if "Biochemical" in pathname:
+            file_to_use = files["biochem"][value]
+        elif "Sludge" in pathname:
             # file_to_use = "sludge HTL3.xlsm"
-            file_to_use = files["sludge"]
+            file_to_use = files["sludge"][value]
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
             # "Feedstock test2.xlsm"
