@@ -965,7 +965,7 @@ def update_case_name(n1, n2, case_name):
     """
     Update case name based on user input.
     """
-    if case_name is not None:
+    if (case_name is not None) and (case_name != ""):
         return f"Edit Life Cycle Inventory Data for Case {case_name}", None
     else:
         return "", None
@@ -975,10 +975,12 @@ def update_case_name(n1, n2, case_name):
     Output("modal", "is_open"),
     Input("add-case-btn", "n_clicks"),
     Input("add-case-name", "n_clicks"),
+    Input("cancel-case", "n_clicks"),
 )
 def add_new_case(
     n1,
     n2,
+    n3
 ):
     """
     Add a new case manually
@@ -990,7 +992,7 @@ def add_new_case(
 
     if changed_id in ["add-case-btn"]:
         is_open = True
-    elif changed_id in ["add-case-name"]:
+    elif changed_id in ["add-case-name", "cancel-case"]:
         is_open = False
     return is_open
 
@@ -1003,15 +1005,17 @@ def add_new_case(
     Input("reset-button", "n_clicks"),
     Input("upload-data", "contents"),
     State("results", "data"),
+    State("case-name", "value"),
 )
-def update_dropdown_options(n1, n2, contents, stored_data):
+def update_dropdown_options(n1, n2, contents, stored_data, case_name):
     """
     Add a new case manually
     """
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if (changed_id in ["add-case-name"]) and (stored_data is not None):
+    if ((changed_id in ["add-case-name"]) and (case_name is not None)
+            and (case_name != "") and (stored_data is not None)):
         data = json.loads(stored_data)
         lci_data = data["lci"]
         options = list(lci_data.keys())
@@ -1088,11 +1092,12 @@ def add_case_data(
             lci_data_sensitivity.update({case_name: base_lci})
             is_open = False
 
-            existing_cases = (
-                case_name
-                if existing_cases is None
-                else existing_cases + ", " + case_name
-            )
+            # existing_cases = (
+            #     case_name
+            #     if existing_cases is None
+            #     else existing_cases + ", " + case_name
+            # )
+            existing_cases = ", ".join(list(lci_data_sensitivity.keys())[1:])
 
     elif (changed_id in ["save-case"]) and (quick_sens_data is not None):
         sensitivity_data = json.loads(quick_sens_data)

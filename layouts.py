@@ -18,9 +18,10 @@ modal = dbc.Modal(
                 type="text",
             ),
         ),
-        dbc.ModalFooter(
-            dbc.Button("Add", id="add-case-name", className="ms-auto", n_clicks=0)
-        ),
+        dbc.ModalFooter([
+            dbc.Button("Add", id="add-case-name", n_clicks=0), 
+            dbc.Button("Cancel", id='cancel-case', color="danger", n_clicks=0)
+    ]),
     ],
     id="modal",
     is_open=False,
@@ -718,6 +719,19 @@ single_file_content = [
             dbc.Col(
                 dbc.Collapse(
                     dbc.Button(
+                        "Edit existing cases",
+                        outline=True,
+                        color="success",
+                        className="mb-3",
+                        n_clicks=0,
+                        id="edit-case-btn",
+                    ),
+                    id="edit-case-collapse", is_open=True
+                ), width="auto",
+            ),
+            dbc.Col(
+                dbc.Collapse(
+                    dbc.Button(
                         "Generate results",
                         outline=True,
                         color="success",
@@ -726,7 +740,7 @@ single_file_content = [
                         id="perform-sensitivity-analysis",
                     ),
                     id="generate-results-collapse",
-                )
+                ), width="auto"
             ),
         ],
         className="gx-2",
