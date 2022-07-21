@@ -8,7 +8,7 @@ from dash.dash_table import DataTable
 
 from utils import mass_units
 
-modal = dbc.Modal(
+add_modal = dbc.Modal(
     [
         dbc.ModalHeader(dbc.ModalTitle("Provide the name of the new case")),
         dbc.ModalBody(
@@ -18,12 +18,34 @@ modal = dbc.Modal(
                 type="text",
             ),
         ),
-        dbc.ModalFooter([
-            dbc.Button("Add", id="add-case-name", n_clicks=0), 
-            dbc.Button("Cancel", id='cancel-case', color="danger", n_clicks=0)
-    ]),
+        dbc.ModalFooter(
+            [
+                dbc.Button("Add", id="add-case-name", n_clicks=0),
+                dbc.Button("Cancel", id="cancel-case", color="danger", n_clicks=0),
+            ]
+        ),
     ],
-    id="modal",
+    id="add_modal",
+    is_open=False,
+)
+
+edit_modal = dbc.Modal(
+    [
+        dbc.ModalHeader(dbc.ModalTitle("Select the case to edit")),
+        dbc.ModalBody(
+            dcc.Dropdown(
+                id="edit-case-dropdown",
+                placeholder="Case Name",
+            )
+        ),
+        dbc.ModalFooter(
+            [
+                dbc.Button("Edit", id="edit-case-name", color="success", n_clicks=0),
+                dbc.Button("Cancel", id="cancel-edit", color="danger", n_clicks=0),
+            ]
+        ),
+    ],
+    id="edit_modal",
     is_open=False,
 )
 
@@ -332,12 +354,20 @@ dropdown_items = dbc.Collapse(
             [
                 dbc.Col(
                     html.P(
-                        id="edit-case",
-                        children="Edit Life Cycle Inventory Data",
+                        children="Edit Life Cycle Inventory Data for Case",
                         className="fst-italic fs-5 text-decoration-underline",
+                    ),
+                    width="auto",
+                ),
+                dbc.Col(
+                    html.P(
+                        id="edit-case",
+                        children="",
+                        className="fst-italic fs-5 text-decoration-underline text-success",
                     )
                 ),
-            ]
+            ],
+            className="gx-2",
         ),
         dbc.Row(
             [
@@ -726,8 +756,9 @@ single_file_content = [
                         n_clicks=0,
                         id="edit-case-btn",
                     ),
-                    id="edit-case-collapse", is_open=True
-                ), width="auto",
+                    id="edit-case-collapse",
+                ),
+                width="auto",
             ),
             dbc.Col(
                 dbc.Collapse(
@@ -740,7 +771,8 @@ single_file_content = [
                         id="perform-sensitivity-analysis",
                     ),
                     id="generate-results-collapse",
-                ), width="auto"
+                ),
+                width="auto",
             ),
         ],
         className="gx-2",
@@ -1072,7 +1104,8 @@ index_page = html.Div(  # The content of the index page
 
 # The content when a pathway is selected
 pathway_page = [
-    modal,
+    add_modal,
+    edit_modal,
     dbc.Row([dbc.Col(navbar, md=3), dbc.Col(content, md=9, className="mt-10")]),
 ]
 

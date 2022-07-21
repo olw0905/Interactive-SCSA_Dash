@@ -959,29 +959,43 @@ def update_figures(
     Output("process_dropdown", "value"),
     Input("add-case-name", "n_clicks"),
     Input("perform-sensitivity-analysis", "n_clicks"),
+    Input("edit-case-name", "n_clicks"),
+    State("edit-case-dropdown", "value"),
     State("case-name", "value"),
+    State("edit-case", "children"),
 )
-def update_case_name(n1, n2, case_name):
+def update_case_name(n1, n2, n3, case_to_edit, case_to_add, case_editing):
     """
     Update case name based on user input.
     """
-    if (case_name is not None) and (case_name != ""):
-        return f"Edit Life Cycle Inventory Data for Case {case_name}", None
+    ctx = dash.callback_context
+    changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if changed_id in ["add-case-name"]:
+        if (case_to_add is not None) and (case_to_add != ""):
+            case = case_to_add
+        else:
+            case = case_editing
+    elif changed_id in ["edit-case-name"]:
+        if (case_to_edit is not None) and (case_to_edit != ""):
+            case = case_to_edit
+        else:
+            case = case_editing
+    else:
+        case = case_editing
+    if (case is not None) and (case != ""):
+        return f"{case}", None
     else:
         return "", None
 
 
 @callback(
-    Output("modal", "is_open"),
+    Output("add_modal", "is_open"),
     Input("add-case-btn", "n_clicks"),
     Input("add-case-name", "n_clicks"),
     Input("cancel-case", "n_clicks"),
 )
-def add_new_case(
-    n1,
-    n2,
-    n3
-):
+def add_new_case(n1, n2, n3):
     """
     Add a new case manually
     """
@@ -998,35 +1012,73 @@ def add_new_case(
 
 
 @callback(
-    Output("dropdown_collapse", "is_open"),
-    Output("generate-results-collapse", "is_open"),
-    Output("process_dropdown", "options"),
-    Input("add-case-name", "n_clicks"),
-    Input("reset-button", "n_clicks"),
-    Input("upload-data", "contents"),
-    State("results", "data"),
-    State("case-name", "value"),
+    Output("edit_modal", "is_open"),
+    Input("edit-case-btn", "n_clicks"),
+    Input("edit-case-name", "n_clicks"),
+    Input("cancel-edit", "n_clicks"),
 )
-def update_dropdown_options(n1, n2, contents, stored_data, case_name):
+def edit_case(n1, n2, n3):
     """
-    Add a new case manually
+    Edit an existing case
     """
+    is_open = False
+
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if ((changed_id in ["add-case-name"]) and (case_name is not None)
-            and (case_name != "") and (stored_data is not None)):
+    if changed_id in ["edit-case-btn"]:
+        is_open = True
+    elif changed_id in ["edit-case-name", "cancel-edit"]:
+        is_open = False
+    return is_open
+
+
+@callback(
+    Output("dropdown_collapse", "is_open"),
+    Output("generate-results-collapse", "is_open"),
+    Output("edit-case-collapse", "is_open"),
+    Output("process_dropdown", "options"),
+    Output("edit-case-dropdown", "options"),
+    Output("edit-case-dropdown", "value"),
+    Output("existing-cases", "children"),
+    # Input("add-case-name", "n_clicks"),
+    # Input("reset-button", "n_clicks"),
+    # Input("upload-data", "contents"),
+    Input("simple-sensitivity-results", "data"),
+    # State("results", "data"),
+    # State("case-name", "value"),
+)
+def update_dropdown_options(stored_data):
+    """
+    Add a new case manually
+    """
+    # ctx = dash.callback_context
+    # changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    # if ((changed_id in ["add-case-name"]) and (case_name is not None)
+    #         and (case_name != "") and (stored_data is not None)):
+    #     data = json.loads(stored_data)
+    #     lci_data = data["lci"]
+    #     options = list(lci_data.keys())
+    #     return True, True, options
+    # else:
+    #     return False, False, []
+    if stored_data is not None:
         data = json.loads(stored_data)
-        lci_data = data["lci"]
-        options = list(lci_data.keys())
-        return True, True, options
-    else:
-        return False, False, []
+        lci_data_sensitivity = data["lci_data"]
+        if (
+            len(lci_data_sensitivity) > 1
+        ):  # At least one case other than Base Case is added.
+            stage_options = list(lci_data_sensitivity["Base Case"].keys())
+            case_options = list(lci_data_sensitivity.keys())[1:]
+            existing_cases = ", ".join(case_options)
+            return True, True, True, stage_options, case_options, None, existing_cases
+        return False, False, False, [], [], None, None
 
 
 @callback(
     Output("simple-sensitivity-results", "data"),
-    Output("existing-cases", "children"),
+    # Output("existing-cases", "children"),
     Input("add-case-name", "n_clicks"),
     Input("save-case", "n_clicks"),
     Input("perform-sensitivity-analysis", "n_clicks"),
@@ -1035,8 +1087,9 @@ def update_dropdown_options(n1, n2, contents, stored_data, case_name):
     Input("renewable_elec", "value"),
     Input("rng_share", "value"),
     Input("coproduct-handling", "value"),
-    State("existing-cases", "children"),
+    # State("existing-cases", "children"),
     State("case-name", "value"),
+    State("edit-case", "children"),
     State("results", "data"),
     State("simple-sensitivity-results", "data"),
     State("lci_datatable", "data"),
@@ -1051,8 +1104,9 @@ def add_case_data(
     renew_elec,
     rng,
     coproduct,
-    existing_cases,
-    case_name,
+    # existing_cases,
+    case_adding,
+    case_editing,
     base_case_data,
     quick_sens_data,
     data_table,
@@ -1067,7 +1121,7 @@ def add_case_data(
     df = pd.DataFrame()
     lci_data_sensitivity = {}
     # dropdown_items = []
-    is_open = False
+    # is_open = False
 
     ctx = dash.callback_context
     changed_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -1079,8 +1133,8 @@ def add_case_data(
         sensitivity_data = json.loads(quick_sens_data)
         lci_data_sensitivity = sensitivity_data["lci_data"]
         if (
-            (case_name is not None)
-            and (case_name != "")
+            (case_adding is not None)
+            and (case_adding != "")
             and (base_case_data is not None)
         ):
             # Copy LCI data of the base case
@@ -1089,30 +1143,30 @@ def add_case_data(
             if "Base Case" not in lci_data_sensitivity.keys():
                 lci_data_sensitivity["Base Case"] = base_lci
 
-            lci_data_sensitivity.update({case_name: base_lci})
-            is_open = False
+            lci_data_sensitivity.update({case_adding: base_lci})
+            # is_open = False
 
-            # existing_cases = (
-            #     case_name
-            #     if existing_cases is None
-            #     else existing_cases + ", " + case_name
-            # )
-            existing_cases = ", ".join(list(lci_data_sensitivity.keys())[1:])
+            # # existing_cases = (
+            # #     case_name
+            # #     if existing_cases is None
+            # #     else existing_cases + ", " + case_name
+            # # )
+            # existing_cases = ", ".join(list(lci_data_sensitivity.keys())[1:])
 
     elif (changed_id in ["save-case"]) and (quick_sens_data is not None):
         sensitivity_data = json.loads(quick_sens_data)
 
         lci_data_sensitivity = sensitivity_data["lci_data"]
 
-        if (case_name is not None) and (case_name != ""):
-            lci_data = lci_data_sensitivity[case_name]
+        if (case_editing is not None) and (case_editing != ""):
+            lci_data = lci_data_sensitivity[case_editing]
             lci_mapping = {
                 key: pd.read_json(value, orient="split")
                 for key, value in lci_data.items()
             }
             if (process_to_edit is not None) and (len(data_table) > 0):
                 lci_mapping[process_to_edit] = pd.DataFrame(data_table)
-                lci_data_sensitivity[case_name] = {
+                lci_data_sensitivity[case_editing] = {
                     key: value.to_json(orient="split", date_format="iso")
                     for key, value in lci_mapping.items()
                 }
@@ -1146,14 +1200,15 @@ def add_case_data(
             lca_res = postprocess(calculate_lca(overall_lci, False))
             lca_res["FileName"] = case_name
             df = pd.concat([df, lca_res], ignore_index=True)
-    elif changed_id in ["reset-button", "upload-data"]:
-        existing_cases = None
+    # elif changed_id in ["reset-button", "upload-data"]:
+    #     existing_cases = None
 
     sensitivity_data = {
         "lci_data": lci_data_sensitivity,
         "pd": df.to_json(date_format="iso", orient="split"),
     }
-    return json.dumps(sensitivity_data), existing_cases
+    return json.dumps(sensitivity_data)
+    # , existing_cases
 
 
 @callback(
