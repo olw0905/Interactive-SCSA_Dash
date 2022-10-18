@@ -149,6 +149,7 @@ primary_units = {
     "Water": "gal",
     "Transportation": "mmBTU",  # For transportation, diesel is used
     "Waste": "g",
+    "Infrastructure": "g",
     "Emissions and sequestration": "g",
     "Other": "g",
 }  # The functional unit for calculation
@@ -159,6 +160,7 @@ display_units = {
     "Electricity": "MJ",  # gram, gal, or BTU per MJ
     "Chemicals and catalysts": "g",  # gram, gal, or BTU per g
     "Waste": "g",
+    "Emissions and sequestration": "g",
     "Other": "g",
     # "Water": "gal",
 }  # The units for the final results
