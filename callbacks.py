@@ -296,7 +296,8 @@ def update_results(
         file_to_use = ""
         # file_to_use = "Feedstock test2-with INL data.xlsm"
         if "Biochemical" in pathname:
-            file_to_use = files["biochem"][value]
+            # file_to_use = files["biochem"][value]
+            file_to_use = files["algae"]
         elif "Sludge" in pathname:
             # file_to_use = "sludge HTL3.xlsm"
             file_to_use = files["sludge"][value]

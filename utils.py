@@ -5,6 +5,7 @@
 import pandas as pd
 
 files = {
+    "algae": "static/Algae-working.xlsm",
     "biochem": [
         "static/Biochemical conversion via BDO.xlsm",
         "static/Biochemical conversion via Acids.xlsm",
