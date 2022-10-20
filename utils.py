@@ -5,7 +5,6 @@
 import pandas as pd
 
 files = {
-    "algae": "static/Algae-working.xlsm",
     "biochem": [
         "static/Biochemical conversion via BDO.xlsm",
         "static/Biochemical conversion via Acids.xlsm",
@@ -15,7 +14,10 @@ files = {
         "static/Sludge HTL without NH3 removal.xlsm",
     ],
     "cfp": "",
-    "cap": "",
+    "cap": [
+        "static/Algae CAP via BDO.xlsm",
+        "static/Algae CAP via acids.xlsm",
+    ],
     "ahtl": "",
     "idl": "",
 }

@@ -59,6 +59,9 @@ def download_files(pathname, value):
             if value == 0
             else "Sludge HTL_with NH3 removal.xlsm"
         )
+    elif "Combined" in pathname:
+        file_to_use = files["cap"][value]
+        file_name = "CAP via BDO.xlsm" if value == 0 else "CAP via acids.xlsm"
     return file_to_use, file_name
 
 
@@ -91,6 +94,14 @@ def update_pathway_title(pathname):
         options = [
             {"label": "with Ammonia Removal", "value": 0},
             {"label": "without Ammonia Removal", "value": 1},
+        ]
+        value = 1
+        is_open = True
+    if "Combined" in pathname:
+        pathway_title = "RD Production from Combined Algae Processing"
+        options = [
+            {"label": "via BDO", "value": 0},
+            {"label": "via Acids", "value": 1},
         ]
         value = 1
         is_open = True
@@ -294,13 +305,12 @@ def update_results(
             renew_elec = 0
             rng = 0
         file_to_use = ""
-        # file_to_use = "Feedstock test2-with INL data.xlsm"
         if "Biochemical" in pathname:
-            # file_to_use = files["biochem"][value]
-            file_to_use = files["algae"]
+            file_to_use = files["biochem"][value]
         elif "Sludge" in pathname:
-            # file_to_use = "sludge HTL3.xlsm"
             file_to_use = files["sludge"][value]
+        elif "Combined" in pathname:
+            file_to_use = files["cap"][value]
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
             # "Feedstock test2.xlsm"
