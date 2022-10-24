@@ -356,6 +356,8 @@ def emission_factor(ser):
     if (
         "Input" in ser["Type"]
     ):  # For inputs, both production and end use emissions should be included
+
+        # Calcualte the input emission factor for electricity
         if ser["Resource"] == "electricity":
             # if pd.isnull(ser["End Use"]):
             if ser["End Use"] == "":
@@ -364,6 +366,8 @@ def emission_factor(ser):
                 ]  # If not generation mix is not specified, use national average
             else:
                 return combined_ci_table[ser["Resource"] + "_" + ser["End Use"]]
+
+        # Calcualte the input emission factor for resources other than electricity
         # elif pd.isnull(ser["End Use"]):
         elif ser["End Use"] == "":
             return combined_ci_table[ser["Resource"]]
@@ -841,4 +845,7 @@ def calculate_lca(df_lci, include_incumbent=True):
             res[metric + "_Sum"] = (
                 res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
             )  # Convert the functional unit from calculation unit to target unit
+        res.loc[
+            res["Type"] == "Main Product", "Unit"
+        ] = target_unit  # Update the functional unit of the main product after the conversion
     return res
