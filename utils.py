@@ -341,10 +341,26 @@ end_use.columns = end_use.columns.set_levels(
 )
 
 # Add urban emission items to end use
-# urban_emissions_items = ['VOC', 'CO', 'NOx', 'PM10', 'PM2.5', 'SOx', 'BC', 'OC']
-# urban_end_use = end_use.loc[urban_emissions_items].copy()
-# urban_end_use.index = 'Urban ' + urban_end_use.index
-# end_use = pd.concat([end_use, urban_end_use], axis=0)
+urban_emissions_items = ["VOC", "CO", "NOx", "PM10", "PM2.5", "SOx", "BC", "OC"]
+urban_end_use = end_use.loc[urban_emissions_items].copy()
+urban_end_use.index = "Urban " + urban_end_use.index
+end_use = pd.concat([end_use, urban_end_use], axis=0)
+
+
+def apply_urban_share(ser, share):
+    """
+    Apply urban emission factors to end use emissions.
+
+    Parameters:
+        ser: a series representing emission factors for the end use of a particular fuel.
+        share: the urban share.
+    Return:
+        a series representing emission factors after urban share is applied.
+    """
+
+    urban_share_ser = pd.Series(1, index=ser.index)
+    urban_share_ser[urban_share_ser.index.str.contains("Urban")] = share
+    return ser.mul(urban_share_ser, fill_value=0)
 
 
 def emission_factor(ser):
@@ -379,7 +395,10 @@ def emission_factor(ser):
             return combined_ci_table[ser["Resource"]]
         else:
             return combined_ci_table[ser["Resource"]].add(
-                end_use[ser["Resource"], ser["End Use"]], fill_value=0
+                apply_urban_share(
+                    end_use[ser["Resource"], ser["End Use"]], ser["Urban Share"]
+                ),
+                fill_value=0,
             )
 
     elif "Intermediate" in ser["Type"]:  # Intermediate products
@@ -387,7 +406,10 @@ def emission_factor(ser):
             return zero_emissions
         else:
             return zero_emissions.add(
-                end_use[ser["Resource"], ser["End Use"]], fill_value=0
+                apply_urban_share(
+                    end_use[ser["Resource"], ser["End Use"]], ser["Urban Share"]
+                ),
+                fill_value=0,
             )
     elif (
         "Co-product" in ser["Type"]
@@ -408,9 +430,13 @@ def emission_factor(ser):
                 # if pd.isnull(ser["Incumbent End Use"])
                 if ser["End Use of Incumbent Product"] == ""
                 else combined_ci_table[ser["Incumbent Product"]].add(
-                    end_use[
-                        ser["Incumbent Product"], ser["End Use of Incumbent Product"]
-                    ],
+                    apply_urban_share(
+                        end_use[
+                            ser["Incumbent Product"],
+                            ser["End Use of Incumbent Product"],
+                        ],
+                        ser["Urban Share"],
+                    ),
                     fill_value=0,
                 )
             )
@@ -419,7 +445,10 @@ def emission_factor(ser):
                 return incumbent_emission
             else:
                 return incumbent_emission.sub(
-                    end_use[ser["Resource"], ser["End Use"]], fill_value=0
+                    apply_urban_share(
+                        end_use[ser["Resource"], ser["End Use"]], ser["Urban Share"]
+                    ),
+                    fill_value=0,
                 )
     else:  # Main product
         # if pd.isnull(ser["End Use"]):
@@ -427,7 +456,10 @@ def emission_factor(ser):
             return zero_emissions
         else:
             return zero_emissions.add(
-                end_use[ser["Resource"], ser["End Use"]], fill_value=0
+                apply_urban_share(
+                    end_use[ser["Resource"], ser["End Use"]], ser["Urban Share"]
+                ),
+                fill_value=0,
             )
 
 

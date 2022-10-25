@@ -43,8 +43,17 @@ def read_data(lci_file):
                 skiprows=1,
                 header=None,
             ).squeeze()
-            df = pd.read_excel(lci_file, sheet_name=sheet, skiprows=3)
+            urban_share = pd.read_excel(
+                lci_file,
+                sheet_name=sheet,
+                nrows=1,
+                usecols=[2],
+                skiprows=2,
+                header=None,
+            ).squeeze()
+            df = pd.read_excel(lci_file, sheet_name=sheet, skiprows=4)
             df["Process"] = df["Process"].fillna(method="ffill").fillna(sheet)
+            df["Urban Share"] = df["Urban Share"].fillna(urban_share)
             lci_mapping.update({sheet: df})
             coproduct_mapping.update({sheet: coproduct})
             final_process_mapping.update({sheet: final_process})
