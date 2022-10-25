@@ -340,6 +340,12 @@ end_use.columns = end_use.columns.set_levels(
     [end_use.columns.levels[0].str.lower(), end_use.columns.levels[1].str.lower()]
 )
 
+# Add urban emission items to end use
+# urban_emissions_items = ['VOC', 'CO', 'NOx', 'PM10', 'PM2.5', 'SOx', 'BC', 'OC']
+# urban_end_use = end_use.loc[urban_emissions_items].copy()
+# urban_end_use.index = 'Urban ' + urban_end_use.index
+# end_use = pd.concat([end_use, urban_end_use], axis=0)
+
 
 def emission_factor(ser):
     """
