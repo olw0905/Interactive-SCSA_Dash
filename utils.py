@@ -74,6 +74,14 @@ metric_units = {
     "Biogenic CO2": "g",
     "CO2 (w/ C in VOC & CO)": "g",
     "GHG": "g",
+    "Urban VOC": "g",
+    "Urban CO": "g",
+    "Urban NOx": "g",
+    "Urban PM10": "g",
+    "Urban PM2.5": "g",
+    "Urban SOx": "g",
+    "Urban BC": "g",
+    "Urban OC": "g",
 }
 
 biorefinery_units = {  # The units used to show biorefinery-level results
@@ -97,6 +105,14 @@ biorefinery_units = {  # The units used to show biorefinery-level results
     "Biogenic CO2": "kg",
     "CO2 (w/ C in VOC & CO)": "kg",
     "GHG": "kg",
+    "Urban VOC": "kg",
+    "Urban CO": "kg",
+    "Urban NOx": "kg",
+    "Urban PM10": "kg",
+    "Urban PM2.5": "kg",
+    "Urban SOx": "kg",
+    "Urban BC": "kg",
+    "Urban OC": "kg",
 }
 
 abatement_cost_units = {
@@ -120,6 +136,14 @@ abatement_cost_units = {
     "Biogenic CO2": "metric ton",
     "CO2 (w/ C in VOC & CO)": "metric ton",
     "GHG": "metric ton",
+    "Urban VOC": "metric ton",
+    "Urban CO": "metric ton",
+    "Urban NOx": "metric ton",
+    "Urban PM10": "metric ton",
+    "Urban PM2.5": "metric ton",
+    "Urban SOx": "metric ton",
+    "Urban BC": "metric ton",
+    "Urban OC": "metric ton",
 }
 
 biorefinery_conversion = {  # The conversion used to calculate biorefinery-level results
@@ -143,6 +167,14 @@ biorefinery_conversion = {  # The conversion used to calculate biorefinery-level
     "Biogenic CO2": 1000,
     "CO2 (w/ C in VOC & CO)": 1000,
     "GHG": 1000,
+    "Urban VOC": 1000,
+    "Urban CO": 1000,
+    "Urban NOx": 1000,
+    "Urban PM10": 1000,
+    "Urban PM2.5": 1000,
+    "Urban SOx": 1000,
+    "Urban BC": 1000,
+    "Urban OC": 1000,
 }
 
 combination_basis = {  # The basis for combinaning multiple "main products"

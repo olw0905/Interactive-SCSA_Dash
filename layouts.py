@@ -678,6 +678,26 @@ single_file_content = [
             dbc.Tab(label="VOC", tab_id="VOC", activeTabClassName="fw-bold fst-italic"),
             # dbc.Tab(label="BC", tab_id="BC", activeTabClassName="fw-bold fst-italic"),
             # dbc.Tab(label="OC", tab_id="OC", activeTabClassName="fw-bold fst-italic"),
+            dbc.Tab(
+                label="Urban NOx",
+                tab_id="Urban NOx",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Urban CO",
+                tab_id="Urban CO",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Urban SOx",
+                tab_id="Urban SOx",
+                activeTabClassName="fw-bold fst-italic",
+            ),
+            dbc.Tab(
+                label="Urban VOC",
+                tab_id="Urban VOC",
+                activeTabClassName="fw-bold fst-italic",
+            ),
         ],
         id="tabs",
         active_tab="GHG",
