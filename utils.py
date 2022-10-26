@@ -43,6 +43,14 @@ metrics = [
     "Biogenic CO2",
     "CO2 (w/ C in VOC & CO)",
     "GHG",
+    "Urban VOC",
+    "Urban CO",
+    "Urban NOx",
+    "Urban PM10",
+    "Urban PM2.5",
+    "Urban SOx",
+    "Urban BC",
+    "Urban OC",
 ]
 
 metric_units = {
@@ -561,6 +569,7 @@ def convert_transport_lci(df):
                     to_origin_fuel * transport_amount,
                 ],
                 "Unit": ["mmBTU"] * 2,
+                "Urban Share": [row.at["Urban Share"]] * 2,
                 "Product Train": row["Product Train"] * 2,
             }
         )
