@@ -428,7 +428,11 @@ def emission_factor(ser):
                 ]  # If not generation mix is not specified, use national average
             else:
                 return combined_ci_table[ser["Resource"] + "_" + ser["End Use"]]
-
+        # Calcualte the input emission factor for special items (i.e., CO2, VOC, CO2 sequestration, etc.)
+        elif "Emissions" in ser["Category"]:
+            return apply_urban_share(
+                combined_ci_table[ser["Resource"]], ser["Urban Share"]
+            )
         # Calcualte the input emission factor for resources other than electricity
         # elif pd.isnull(ser["End Use"]):
         elif ser["End Use"] == "":
