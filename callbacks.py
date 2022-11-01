@@ -530,7 +530,10 @@ def update_figures(
 
     res_new_with_incumbent = pd.read_json(data["pd"], orient="split")
     res_new_with_incumbent = res_new_with_incumbent.loc[
-        res_new_with_incumbent[tab + "_Sum"] != 0
+        ~(
+            (res_new_with_incumbent[tab + "_Sum"] == 0)
+            & (res_new_with_incumbent["Type"].str.contains("Input"))
+        )
     ]
     coproduct_with_incumbent = pd.read_json(data["coproduct_res"], orient="split")
 

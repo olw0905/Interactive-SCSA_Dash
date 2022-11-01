@@ -853,6 +853,11 @@ def calculate_lca(df_lci, include_incumbent=True):
             # .fillna("")
             .values[0]
         )
+        incumbent_urban_share = (
+            df_lci.loc[df_lci["Type"] == "Main Product", "Urban Share"]
+            # .fillna("")
+            .values[0]
+        )
         incumbent_category = df_lci.loc[
             df_lci["Type"] == "Main Product", "Category"
         ].values[0]
@@ -870,6 +875,7 @@ def calculate_lca(df_lci, include_incumbent=True):
                 "Resource": [incumbent_resource],
                 "Process": [incumbent_resource + " (Incumbent)"],
                 "End Use": [incumbent_end_use],
+                "Urban Share": [incumbent_urban_share],
                 "Amount": [1],
                 "Unit": [primary_units[incumbent_category]],
             }
