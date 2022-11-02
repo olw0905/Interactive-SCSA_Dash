@@ -279,14 +279,21 @@ def update_results(
             overall_lci = quick_sensitivity(overall_lci, renew_elec, rng)
             res_new = postprocess(calculate_lca(overall_lci))
             update_status = True
-            coproduct_lci = generate_coproduct_lci(
+            coproduct_return = generate_coproduct_lci(
                 lci_mapping, updated_coproduct_mapping, final_process_mapping
             )
-            if coproduct_lci is not None:
+            if coproduct_return is not None:
                 # coproduct_lci = elec_sensitivity(coproduct_lci, renew_elec)
                 # coproduct_lci = rng_sensitivity(coproduct_lci, rng)
+                (
+                    coproduct_lci,
+                    coproduct_final_process_mapping,
+                    coproduct_final_process,
+                ) = coproduct_return
                 coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec, rng)
                 coproduct_res = postprocess(calculate_lca(coproduct_lci))
+            else:
+                coproduct_final_process = final_process
         else:
             data = json.loads(stored_data)
             res_new = pd.read_json(data["pd"], orient="split")
@@ -324,14 +331,21 @@ def update_results(
         # overall_lci = rng_sensitivity(overall_lci, rng)
         overall_lci = quick_sensitivity(overall_lci, renew_elec, rng)
         res_new = postprocess(calculate_lca(overall_lci))
-        coproduct_lci = generate_coproduct_lci(
+        coproduct_return = generate_coproduct_lci(
             lci_mapping, updated_coproduct_mapping, final_process_mapping
         )
-        if coproduct_lci is not None:
+        if coproduct_return is not None:
+            (
+                coproduct_lci,
+                coproduct_final_process_mapping,
+                coproduct_final_process,
+            ) = coproduct_return
             # coproduct_lci = elec_sensitivity(coproduct_lci, renew_elec)
             # coproduct_lci = rng_sensitivity(coproduct_lci, rng)
             coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec, rng)
             coproduct_res = postprocess(calculate_lca(coproduct_lci))
+        else:
+            coproduct_final_process = final_process
 
     lci_data = {
         key: value.to_json(orient="split", date_format="iso")
@@ -339,7 +353,7 @@ def update_results(
     }
 
     # Calcualte the parameters required for biorefinery-level results
-    coproduct_method = coproduct_mapping[final_process]
+    coproduct_method = coproduct_mapping[coproduct_final_process]
     if "Mass" in coproduct_mapping:
         basis = "mass"
     elif "Energy" in coproduct_method:
@@ -348,7 +362,7 @@ def update_results(
         basis = "value"
     else:
         basis = None
-    final_process_lci = format_input(lci_mapping[final_process], basis=basis)
+    final_process_lci = format_input(lci_mapping[coproduct_final_process], basis=basis)
     main_product_df = final_process_lci.loc[final_process_lci["Type"] == "Main Product"]
     main_product_series = main_product_df.iloc[0].copy()
     main_product_series["Input Amount"] = main_product_series["Amount"]

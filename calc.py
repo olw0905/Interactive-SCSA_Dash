@@ -333,69 +333,90 @@ def generate_coproduct_lci_mapping(
     lci_mapping = lci_mapping_original.copy()
 
     # Locate the last process
+    final_process = None
     for sheet, process_bool in final_process_mapping.items():
-        if process_bool == "Yes":
+        # if process_bool == "Yes":
+        #     final_process = sheet
+        #     break
+        df = lci_mapping[sheet]
+        if (
+            len(
+                df.loc[
+                    (df["Type"] == "Co-product")
+                    & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+                ]
+            )
+            > 0
+        ):
             final_process = sheet
             break
-
-    if "Displacement" in coproduct_mapping[final_process]:
-        df = lci_mapping[final_process].copy()
-        if (
-            len(
-                df.loc[
-                    (df["Type"] == "Co-product")
-                    & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
-                ]
-            )
-            == 0
-        ):  # There is no co-product to analyze
-            return None
-        df = df.loc[
-            (df["Type"] == "Co-product")
-            & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
-        ]
-        df["Type"] = "Main Product"
-        df[
-            "End Use"
-        ] = ""  # End use is already accounted for when calculating main product results with displacement method
-        # return None
+    if final_process is None:
+        return None  # There is no co-product to analyze
     else:
+        coproduct_final_process_mapping = {
+            sheet: "No" for sheet in final_process_mapping
+        }
+        coproduct_final_process_mapping[final_process] = "Yes"
+
         df = lci_mapping[final_process].copy()
-        if (
-            len(
-                df.loc[
-                    (df["Type"] == "Co-product")
-                    & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
-                ]
+        if "Displacement" in coproduct_mapping[final_process]:
+            # df = lci_mapping[final_process].copy()
+            # if (
+            #     len(
+            #         df.loc[
+            #             (df["Type"] == "Co-product")
+            #             & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+            #         ]
+            #     )
+            #     == 0
+            # ):  # There is no co-product to analyze
+            #     return None
+            df = df.loc[
+                (df["Type"] == "Co-product")
+                & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+            ]
+            df["Type"] = "Main Product"
+            df[
+                "End Use"
+            ] = ""  # End use is already accounted for when calculating main product results with displacement method
+            # return None
+        else:
+            # df = lci_mapping[final_process].copy()
+            # if (
+            #     len(
+            #         df.loc[
+            #             (df["Type"] == "Co-product")
+            #             & (df["Always Use Displacement Method for Co-Product?"] != "Yes")
+            #         ]
+            #     )
+            #     == 0
+            # ):  # There is no co-product to analyze
+            #     return None
+            df.loc[
+                (df["Type"] == "Co-product")
+                & (df["Always Use Displacement Method for Co-Product?"] != "Yes"),
+                "Type",
+            ] = "Main"
+            df.loc[
+                df["Type"] == "Main Product",
+                "Always Use Displacement Method for Co-Product?",
+            ] = "No"
+            df.loc[df["Type"] == "Main Product", "Type"] = "Co-product"
+            df.loc[df["Type"] == "Main", "Type"] = "Main Product"
+
+            df["Product Train"] = df["Product Train"].map(
+                {
+                    "Both": "Both",
+                    "Co-product": "Main product",
+                    "Main product": "Co-product",
+                    "Main Product": "Co-product",
+                }
             )
-            == 0
-        ):  # There is no co-product to analyze
-            return None
-        df.loc[
-            (df["Type"] == "Co-product")
-            & (df["Always Use Displacement Method for Co-Product?"] != "Yes"),
-            "Type",
-        ] = "Main"
-        df.loc[
-            df["Type"] == "Main Product",
-            "Always Use Displacement Method for Co-Product?",
-        ] = "No"
-        df.loc[df["Type"] == "Main Product", "Type"] = "Co-product"
-        df.loc[df["Type"] == "Main", "Type"] = "Main Product"
 
-        df["Product Train"] = df["Product Train"].map(
-            {
-                "Both": "Both",
-                "Co-product": "Main product",
-                "Main product": "Co-product",
-                "Main Product": "Co-product",
-            }
-        )
-
-        # lci_mapping.update({final_process: df})
-        # return lci_mapping
+            # lci_mapping.update({final_process: df})
+            # return lci_mapping
     lci_mapping.update({final_process: df})
-    return lci_mapping
+    return lci_mapping, coproduct_final_process_mapping, final_process
 
 
 def generate_coproduct_lci(
@@ -416,15 +437,16 @@ def generate_coproduct_lci(
     #     False  # A flag indicating whether system-level allocation is used
     # )
     # system_allocation_basis = "mass"  # The basis used for system-level allocation
-    lci_mapping = generate_coproduct_lci_mapping(
+    coproduct_mappings = generate_coproduct_lci_mapping(
         lci_mapping_original, coproduct_mapping, final_process_mapping
     )
 
-    if lci_mapping is None:
+    if coproduct_mappings is None:
         return None
 
+    lci_mapping, coproduct_final_process_mapping, final_process = coproduct_mappings
     overall_lci = generate_final_lci(
-        lci_mapping, coproduct_mapping, final_process_mapping
+        lci_mapping, coproduct_mapping, coproduct_final_process_mapping
     )
 
     # # Locate the last process
@@ -496,7 +518,7 @@ def generate_coproduct_lci(
     #     overall_lci["Product Train"] = "Both"
     # overall_lci = allocation(overall_lci, system_allocation_basis)
 
-    return overall_lci
+    return overall_lci, coproduct_final_process_mapping, final_process
 
 
 # def calc(sheet_names, step_mapping):
