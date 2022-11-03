@@ -306,7 +306,7 @@ def unit_conversion(
     if units[input_unit] != units[output_unit]:
         if (
             output_unit in volume_units
-        ):  # Ouput is vlume, them input must be mass, because only water has output unit of volume. Modified from origin
+        ):  # Ouput is volume, then input must be mass, because only water has output unit of volume. Modified from origin
             m3_amount = amount * mass.loc["kg", input_unit] / density
             return m3_amount * volume.loc[output_unit, "m3"]
         elif input_unit in volume_units:  # Input unit is volume
@@ -331,6 +331,25 @@ def unit_conversion(
         return amount * volume.loc[output_unit, input_unit]
 
 
+def process_ser(ser):
+    """
+    Process the background LCA data: convert the functional unit used by GREET to that used by the tool.
+    Parameter:
+        ser: the dataframe to be processed
+    Return:
+        ser: the data series that has been processed
+    """
+    unit = ser["Functional Unit"]
+    # unit must be either a mass unit (e.g., kg), energy unit (e.g., MJ), or volume (e.g., gal, for water only)
+    if unit in mass_units:
+        ser.iloc[1:] = ser.iloc[1:] / mass.loc["g", unit]
+    elif unit in energy_units:
+        ser.iloc[1:] = ser.iloc[1:] / energy.loc["mmBTU", unit]
+    else:  # the functional unit for water is gallon. No conversion is needed.
+        pass
+    return ser
+
+
 # Process emission factors read from the data extraction file
 production_emissions = pd.read_excel(
     "Lookup table_prototyping.xlsx",
@@ -341,7 +360,8 @@ production_emissions = pd.read_excel(
 production_emissions = production_emissions.dropna()
 production_emissions.loc["Biogenic CO2"] = 0
 production_emissions.index = production_emissions.index.str.strip()
-production_emissions = production_emissions.drop(["Category", "Primary Unit"])
+production_emissions = production_emissions.apply(process_ser, axis=0)
+production_emissions = production_emissions.drop(["Functional Unit"])
 
 chemicals_emissions = pd.read_excel(
     "Lookup table_prototyping.xlsx",
@@ -352,7 +372,8 @@ chemicals_emissions = pd.read_excel(
 chemicals_emissions = chemicals_emissions.dropna()
 chemicals_emissions.loc["Biogenic CO2"] = 0
 chemicals_emissions.index = chemicals_emissions.index.str.strip()
-chemicals_emissions = chemicals_emissions.drop(["Category", "Primary Unit"])
+chemicals_emissions = chemicals_emissions.apply(process_ser, axis=0)
+chemicals_emissions = chemicals_emissions.drop(["Functional Unit"])
 
 feedstock_emissions = pd.read_excel(
     "Lookup table_prototyping.xlsx", sheet_name="Feedstock", index_col=0, skipfooter=2
@@ -360,7 +381,8 @@ feedstock_emissions = pd.read_excel(
 feedstock_emissions = feedstock_emissions.dropna()
 feedstock_emissions.loc["Biogenic CO2"] = 0
 feedstock_emissions.index = feedstock_emissions.index.str.strip()
-feedstock_emissions = feedstock_emissions.drop(["Category", "Primary Unit"])
+feedstock_emissions = feedstock_emissions.apply(process_ser, axis=0)
+feedstock_emissions = feedstock_emissions.drop(["Functional Unit"])
 
 combined_ci_table = pd.concat(
     [production_emissions, chemicals_emissions, feedstock_emissions], axis=1
@@ -374,7 +396,9 @@ end_use = pd.read_excel(
     header=[0, 1],
     skipfooter=2,
 )
-end_use = end_use.drop("Primary Unit").fillna(0)
+end_use = end_use.fillna(0)
+end_use = end_use.apply(process_ser, axis=0)
+end_use = end_use.drop("Functional Unit")
 end_use.index = end_use.index.str.strip()
 end_use.columns = end_use.columns.set_levels(
     [end_use.columns.levels[0].str.lower(), end_use.columns.levels[1].str.lower()]
