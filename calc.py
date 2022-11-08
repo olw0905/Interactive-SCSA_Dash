@@ -585,6 +585,11 @@ def postprocess(res):
     #     res["Resource"].str.replace("Wwt", "WWT").str.replace("Fgd", "FGD")
     # )
 
+    # Restore surrogates
+    res.loc[res["Surrogate For"].notna(), "Resource"] = res.loc[
+        res["Surrogate For"].notna(), "Surrogate For"
+    ]
+
     return res
 
 
