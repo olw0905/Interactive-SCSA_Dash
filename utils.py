@@ -185,8 +185,9 @@ combination_basis = {  # The basis for combinaning multiple "main products"
 }
 
 primary_units = {
+    # Function "process_ser" requires to use g for mass and mmBTU for energy.
     "Process fuel": "mmBTU",
-    "Biomass": "ton",
+    "Biomass": "g",
     "Electricity": "mmBTU",
     "Chemicals and catalysts": "g",
     "Water": "gal",
