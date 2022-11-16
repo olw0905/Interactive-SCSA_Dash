@@ -226,7 +226,7 @@ def update_results(
 
     if (
         contents
-        or ("update-lci" in changed_id)
+        # or ("update-lci" in changed_id)
         or (changed_id in ["coproduct-handling", "renewable_elec", "rng_share"])
     ):
         if contents:
@@ -238,8 +238,8 @@ def update_results(
                 )
                 uploaded = True
         if (
-            ("update-lci" in changed_id)
-            or (changed_id in ["coproduct-handling", "renewable_elec", "rng_share"])
+            (changed_id in ["coproduct-handling", "renewable_elec", "rng_share"])
+            # or ("update-lci" in changed_id)
             or isinstance(lci_new, str)
         ):
             data = json.loads(stored_data)
@@ -256,11 +256,11 @@ def update_results(
             renew_elec = renewable_elec_share
             rng = rng_share
 
-            if "update-lci" in changed_id:
-                lci_mapping[process_to_edit] = pd.DataFrame(data_table)
-                dropdown_value = process_to_edit
-                renew_elec = 0
-                rng = 0
+            # if "update-lci" in changed_id:
+            #     lci_mapping[process_to_edit] = pd.DataFrame(data_table)
+            #     dropdown_value = process_to_edit
+            #     renew_elec = 0
+            #     rng = 0
 
         if coproduct != "User Specification":
             updated_coproduct_mapping = {key: coproduct for key in coproduct_mapping}
@@ -294,13 +294,43 @@ def update_results(
                 coproduct_res = postprocess(calculate_lca(coproduct_lci))
             else:
                 coproduct_final_process = final_process
-        else:
+        else:  # Errors esist in the uploaded LCI file, restore to the previous results
             data = json.loads(stored_data)
+            uploaded = data["uploaded"]
+            lci_data = data["lci"]
+            lci_mapping = {
+                key: pd.read_json(value, orient="split")
+                for key, value in lci_data.items()
+            }
+            coproduct_mapping = data["coproduct"]
+            updated_coproduct_mapping = coproduct_mapping.copy()
+            final_process_mapping = data["final_process"]
             res_new = pd.read_json(data["pd"], orient="split")
             coproduct_res = pd.read_json(data["coproduct_res"], orient="split")
             error_status = True
+            update_status = False
             renew_elec = 0
             rng = 0
+
+            coproduct_return = generate_coproduct_lci(
+                lci_mapping, updated_coproduct_mapping, final_process_mapping
+            )
+            if coproduct_return is not None:
+                (
+                    coproduct_lci,
+                    coproduct_final_process_mapping,
+                    coproduct_final_process,
+                ) = coproduct_return
+                # coproduct_lci = elec_sensitivity(coproduct_lci, renew_elec)
+                # coproduct_lci = rng_sensitivity(coproduct_lci, rng)
+                coproduct_lci = quick_sensitivity(coproduct_lci, renew_elec, rng)
+                coproduct_res = postprocess(calculate_lca(coproduct_lci))
+            else:
+                for sheet, process_bool in final_process_mapping.items():
+                    if process_bool == "Yes":
+                        final_process = sheet
+                        break
+                coproduct_final_process = final_process
         # if lci_new is not None:
         if isinstance(lci_new, str):
             data_status = lci_new
@@ -347,10 +377,10 @@ def update_results(
         else:
             coproduct_final_process = final_process
 
-    lci_data = {
-        key: value.to_json(orient="split", date_format="iso")
-        for key, value in lci_mapping.items()
-    }
+        lci_data = {
+            key: value.to_json(orient="split", date_format="iso")
+            for key, value in lci_mapping.items()
+        }
 
     # Calcualte the parameters required for biorefinery-level results
     coproduct_method = coproduct_mapping[coproduct_final_process]
