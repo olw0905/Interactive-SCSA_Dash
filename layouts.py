@@ -486,6 +486,24 @@ single_file_content = [
                 width="auto",
                 className="align-self-center",
             ),
+            ####################################
+            # Button for download results
+            dbc.Col(
+                [
+                    dbc.Button(
+                        "Download Results",
+                        color="primary",
+                        className="me-1",
+                        id="download-res-button",
+                        n_clicks=0,
+                        style={"margin": "10px"},
+                    ),
+                    dcc.Download(id="download-csv"),
+                ],
+                width="auto",
+                className="align-self-center",
+            ),
+            ####################################
         ],
         className="mb-3",
     ),

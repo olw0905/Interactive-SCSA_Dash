@@ -39,6 +39,24 @@ from utils import (
     unit_conversion,
 )
 
+#############################################################
+# Callback for download results
+@callback(
+    Output("download-csv", "data"),
+    Input("download-res-button", "n_clicks"),
+    State("results", "data"),
+    prevent_initial_call=True,
+)
+def download_files(n_clicks, stored_data):
+    data = json.loads(stored_data)
+    # lci_data = data["lci"]
+    df = pd.read_json(data["pd"], orient="split")
+    df = df.loc[~df["Pathway"].str.contains("Incumbent")]
+    return dcc.send_data_frame(df.to_csv, "results.csv")
+
+
+#############################################################
+
 
 @callback(
     Output("download-pathway", "href"),
