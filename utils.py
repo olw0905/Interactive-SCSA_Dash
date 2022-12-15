@@ -4,6 +4,8 @@
 # from json.tool import main
 import pandas as pd
 
+# data_file = "Lookup table_prototyping.xlsx"
+data_file = "Lookup table_prototyping_greet2022.xlsx"
 files = {
     "biochem": [
         "static/Biochemical conversion via BDO.xlsm",
@@ -209,32 +211,24 @@ display_units = {
     # "Water": "gal",
 }  # The units for the final results
 
-units = pd.read_excel(
-    "Lookup table_prototyping.xlsx", sheet_name="Units", header=0, index_col=0
-).squeeze("columns")
+units = pd.read_excel(data_file, sheet_name="Units", header=0, index_col=0).squeeze(
+    "columns"
+)
 # units.index = units.index.str.lower()
 
-mass = pd.read_excel(
-    "Lookup table_prototyping.xlsx", sheet_name="Mass", header=0, index_col=0
-)
+mass = pd.read_excel(data_file, sheet_name="Mass", header=0, index_col=0)
 # mass.columns = mass.columns.str.lower()
 # mass.index = mass.index.str.lower()
 
-volume = pd.read_excel(
-    "Lookup table_prototyping.xlsx", sheet_name="Volume", header=0, index_col=0
-)
+volume = pd.read_excel(data_file, sheet_name="Volume", header=0, index_col=0)
 # volume.columns = volume.columns.str.lower()
 # volume.index = volume.index.str.lower()
 
-energy = pd.read_excel(
-    "Lookup table_prototyping.xlsx", sheet_name="Energy", header=0, index_col=0
-)
+energy = pd.read_excel(data_file, sheet_name="Energy", header=0, index_col=0)
 # energy.columns = energy.columns.str.lower()
 # energy.index = energy.index.str.lower()
 
-length = pd.read_excel(
-    "Lookup table_prototyping.xlsx", sheet_name="Length", header=0, index_col=0
-)
+length = pd.read_excel(data_file, sheet_name="Length", header=0, index_col=0)
 # length.columns = length.columns.str.lower()
 # length.index = length.index.str.lower()
 
@@ -255,9 +249,7 @@ potential_units = {
     "Other": mass_units,
 }
 
-properties = pd.read_excel(
-    "Lookup table_prototyping.xlsx", sheet_name="Fuel specs", skiprows=1, index_col=0
-)
+properties = pd.read_excel(data_file, sheet_name="Fuel specs", skiprows=1, index_col=0)
 properties.index = properties.index.str.lower()
 
 
@@ -353,7 +345,7 @@ def process_ser(ser):
 
 # Process emission factors read from the data extraction file
 production_emissions = pd.read_excel(
-    "Lookup table_prototyping.xlsx",
+    data_file,
     sheet_name="Production",
     index_col=0,
     skipfooter=2,
@@ -365,7 +357,7 @@ production_emissions = production_emissions.apply(process_ser, axis=0)
 production_emissions = production_emissions.drop(["Functional Unit"])
 
 chemicals_emissions = pd.read_excel(
-    "Lookup table_prototyping.xlsx",
+    data_file,
     sheet_name="Chemicals",
     index_col=0,
     skipfooter=2,
@@ -377,7 +369,7 @@ chemicals_emissions = chemicals_emissions.apply(process_ser, axis=0)
 chemicals_emissions = chemicals_emissions.drop(["Functional Unit"])
 
 feedstock_emissions = pd.read_excel(
-    "Lookup table_prototyping.xlsx", sheet_name="Feedstock", index_col=0, skipfooter=2
+    data_file, sheet_name="Feedstock", index_col=0, skipfooter=2
 )
 feedstock_emissions = feedstock_emissions.dropna()
 feedstock_emissions.loc["Biogenic CO2"] = 0
@@ -391,7 +383,7 @@ combined_ci_table = pd.concat(
 combined_ci_table.columns = combined_ci_table.columns.str.lower()
 
 end_use = pd.read_excel(
-    "Lookup table_prototyping.xlsx",
+    data_file,
     sheet_name="End use test",
     index_col=0,
     header=[0, 1],
@@ -537,11 +529,14 @@ def convert_transport_lci(df):
     df: the original LCI file that contains transportation material, distance, and moisture
     """
 
-    xl = pd.ExcelFile("Lookup table_prototyping.xlsx")
+    xl = pd.ExcelFile(data_file)
     nrows = xl.book["Transportation"].max_row
 
     fuel_economy = xl.parse(
-        sheet_name="Transportation", skipfooter=34, index_col=0
+        sheet_name="Transportation",
+        # skipfooter=34,
+        index_col=0,
+        nrows=2,
     ).dropna(axis=1, how="all")
 
     # payload = xl.parse(
