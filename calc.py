@@ -52,8 +52,25 @@ def read_data(lci_file):
                 header=None,
             ).squeeze()
             df = pd.read_excel(lci_file, sheet_name=sheet, skiprows=4)
+            df["End Use"] = df["End Use"].fillna("")
             df["Process"] = df["Process"].fillna(method="ffill").fillna(sheet)
             df["Urban Share"] = df["Urban Share"].fillna(urban_share)
+
+            # Select the input from another stage that has end use emissions
+            input_other_stage_use = df.loc[
+                (df["Type"] == "Input from Another Stage") & (df["End Use"] != "")
+            ].copy()
+            input_other_stage_use["Type"] = "Intermediate Product"
+            df = pd.concat([df, input_other_stage_use])
+
+            if final_process == "No":
+                # Select the main products that have end use emissions
+                main_prod_use = df.loc[
+                    (df["Type"] == "Main Product") & (df["End Use"] != "")
+                ].copy()
+                main_prod_use["Type"] = "Intermediate Product"
+                df = pd.concat([df, main_prod_use])
+
             lci_mapping.update({sheet: df})
             coproduct_mapping.update({sheet: coproduct})
             final_process_mapping.update({sheet: final_process})

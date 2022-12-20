@@ -403,6 +403,23 @@ urban_end_use = end_use.loc[urban_emissions_items].copy()
 urban_end_use.index = "Urban " + urban_end_use.index
 end_use = pd.concat([end_use, urban_end_use], axis=0)
 
+fuel_dist_urban = pd.read_excel(
+    data_file,
+    sheet_name="Fuel dist urban",
+    index_col=0,
+    header=[0, 1],
+    # skipfooter=2,
+)
+fuel_dist_urban = fuel_dist_urban.apply(process_ser, axis=0)
+fuel_dist_urban = fuel_dist_urban.drop("Functional Unit")
+fuel_dist_urban.index = fuel_dist_urban.index.str.strip()
+fuel_dist_urban.columns = fuel_dist_urban.columns.set_levels(
+    [
+        fuel_dist_urban.columns.levels[0].str.lower(),
+        fuel_dist_urban.columns.levels[1].str.lower(),
+    ]
+)
+
 
 def apply_urban_share(ser, share):
     """
@@ -454,6 +471,10 @@ def emission_factor(ser):
         # elif pd.isnull(ser["End Use"]):
         elif ser["End Use"] == "":
             return combined_ci_table[ser["Resource"]]
+        elif ser["End Use"] == "fuel distribution":
+            return combined_ci_table[ser["Resource"]].add(
+                fuel_dist_urban[ser["Resource"], ser["End Use"]], fill_value=0
+            )
         else:
             return combined_ci_table[ser["Resource"]].add(
                 apply_urban_share(
@@ -465,6 +486,10 @@ def emission_factor(ser):
     elif "Intermediate" in ser["Type"]:  # Intermediate products
         if (ser["Resource"] == "electricity") or (ser["End Use"] == ""):
             return zero_emissions
+        elif ser["End Use"] == "fuel distribution":
+            return zero_emissions.add(
+                fuel_dist_urban[ser["Resource"], ser["End Use"]], fill_value=0
+            )
         else:
             return zero_emissions.add(
                 apply_urban_share(
@@ -486,24 +511,37 @@ def emission_factor(ser):
                     ser["Incumbent Product"] + "_" + ser["End Use of Incumbent Product"]
                 ]
         else:
-            incumbent_emission = (
-                combined_ci_table[ser["Incumbent Product"]]
-                # if pd.isnull(ser["Incumbent End Use"])
-                if ser["End Use of Incumbent Product"] == ""
-                else combined_ci_table[ser["Incumbent Product"]].add(
-                    apply_urban_share(
-                        end_use[
-                            ser["Incumbent Product"],
-                            ser["End Use of Incumbent Product"],
-                        ],
-                        ser["Urban Share"],
-                    ),
+            if ser["End Use of Incumbent Product"] == "fuel distribution":
+                incumbent_emission = combined_ci_table[ser["Resource"]].add(
+                    fuel_dist_urban[
+                        ser["Resource"], ser["End Use of Incumbent Product"]
+                    ],
                     fill_value=0,
                 )
-            )
+            else:
+                incumbent_emission = (
+                    combined_ci_table[ser["Incumbent Product"]]
+                    # if pd.isnull(ser["Incumbent End Use"])
+                    if ser["End Use of Incumbent Product"] == ""
+                    else combined_ci_table[ser["Incumbent Product"]].add(
+                        apply_urban_share(
+                            end_use[
+                                ser["Incumbent Product"],
+                                ser["End Use of Incumbent Product"],
+                            ],
+                            ser["Urban Share"],
+                        ),
+                        fill_value=0,
+                    )
+                )
             # if pd.isnull(ser["End Use"]):
             if ser["End Use"] == "":
                 return incumbent_emission
+            elif ser["End Use"] == "fuel distribution":
+                return incumbent_emission.sub(
+                    fuel_dist_urban[ser["Resource"], ser["End Use"]],
+                    fill_value=0,
+                )
             else:
                 return incumbent_emission.sub(
                     apply_urban_share(
@@ -515,6 +553,11 @@ def emission_factor(ser):
         # if pd.isnull(ser["End Use"]):
         if ser["End Use"] == "":
             return zero_emissions
+        elif ser["End Use"] == "fuel distribution":
+            return zero_emissions.add(
+                fuel_dist_urban[ser["Resource"], ser["End Use"]],
+                fill_value=0,
+            )
         else:
             return zero_emissions.add(
                 apply_urban_share(
@@ -662,7 +705,9 @@ def step_processing(step_map, step_name):
 
         conversion = unit_conversion(row)
 
-        step_df = step_df[step_df["Type"].isin(["Input", "Co-product"])].copy()
+        step_df = step_df[
+            step_df["Type"].isin(["Input", "Co-product", "Intermediate Product"])
+        ].copy()
         step_df["Amount"] = step_df["Amount"] * conversion
 
         to_concat.append(step_df)
