@@ -8,12 +8,18 @@ import pandas as pd
 data_file = "Lookup table_prototyping_greet2022.xlsx"
 files = {
     "biochem": [
-        "static/Biochemical conversion via BDO.xlsm",
-        "static/Biochemical conversion via Acids.xlsm",
+        # "static/Biochemical conversion via BDO.xlsm",
+        # "static/Biochemical conversion via Acids.xlsm",
+        "Static/Biochemical conversion via BDO_2022 SOT.xlsm",
+        "static/Biochemical conversion via Acids_2022 SOT.xlsm",
+        "Static/Biochemical conversion via BDO_burn lignin_2022 SOT.xlsm",
+        "static/Biochemical conversion via Acids_burn lignin_2022 SOT.xlsm",
     ],
     "sludge": [
-        "static/Sludge HTL with NH3 removal.xlsm",
-        "static/Sludge HTL without NH3 removal.xlsm",
+        # "static/Sludge HTL with NH3 removal.xlsm",
+        # "static/Sludge HTL without NH3 removal.xlsm",
+        "static/Sludge HTL with NH3 removal_2022 SOT.xlsm",
+        "static/Sludge HTL without NH3 removal_2022 SOT.xlsm",
     ],
     "cfp": "",
     "cap": [

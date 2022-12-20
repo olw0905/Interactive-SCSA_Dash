@@ -69,7 +69,14 @@ def download_files(pathname, value):
     file_name = ""
     if "Biochemical" in pathname:
         file_to_use = files["biochem"][value]
-        file_name = "Biochem-BDO.xlsm" if value == 0 else "Biochem-Acids.xlsm"
+        if value == 0:
+            file_name = "Biochem-lignin-upgrading-BDO.xlsm"
+        elif value == 1:
+            file_name = "Biochem-lignin-upgrading-Acids.xlsm"
+        elif value == 2:
+            file_name = "Biochem-burn-lignin-BDO.xlsm"
+        else:
+            file_name = "Biochem-burn-lignin-Acids.xlsm"
     elif "Sludge" in pathname:
         file_to_use = files["sludge"][value]
         file_name = (
@@ -102,8 +109,10 @@ def update_pathway_title(pathname):
     if "Biochemical" in pathname:
         pathway_title = "RD Production from Corn Stover via Biochemical Conversion"
         options = [
-            {"label": "via BDO", "value": 0},
-            {"label": "via Acids", "value": 1},
+            {"label": "Lignin upgrading, via BDO", "value": 0},
+            {"label": "Lignin upgrading, via Acids", "value": 1},
+            {"label": "Burn lignin, via BDO", "value": 2},
+            {"label": "Burn lignin, via Acids", "value": 3},
         ]
         value = 0
         is_open = True
