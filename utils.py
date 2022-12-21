@@ -23,8 +23,10 @@ files = {
     ],
     "cfp": "",
     "cap": [
-        "static/Algae CAP via BDO.xlsm",
-        "static/Algae CAP via acids.xlsm",
+        # "static/Algae CAP via BDO.xlsm",
+        # "static/Algae CAP via acids.xlsm",
+        "static/Algae CAP via BDO_2022.xlsm",
+        "static/Algae CAP via Acids_2022.xlsm",
     ],
     "ahtl": "",
     "idl": "",
