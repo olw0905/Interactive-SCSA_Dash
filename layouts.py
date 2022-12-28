@@ -86,6 +86,15 @@ nav_item = dbc.Nav(
         ),
         dbc.NavItem(
             dbc.NavLink(
+                "Algae Hydrothermal Liquefaction",
+                href="/Algae-Hydrothermal-Liquefaction",
+                active="exact",
+                external_link=True,
+                disabled=True,
+            )
+        ),
+        dbc.NavItem(
+            dbc.NavLink(
                 "Catalytic Fast Pyrolysis",
                 href="/Catalytic-Fast-Pyrolysis",
                 active="exact",
@@ -97,15 +106,6 @@ nav_item = dbc.Nav(
             dbc.NavLink(
                 "Indirect Hydrothermal Liquefaction",
                 href="/Indirect-Hydrothermal-Liquefaction",
-                active="exact",
-                external_link=True,
-                disabled=True,
-            )
-        ),
-        dbc.NavItem(
-            dbc.NavLink(
-                "Algae Hydrothermal Liquefaction",
-                href="/Algae-Hydrothermal-Liquefaction",
                 active="exact",
                 external_link=True,
                 disabled=True,
@@ -1086,6 +1086,15 @@ index_page = html.Div(  # The content of the index page
                 ),
                 dbc.NavItem(
                     dbc.NavLink(
+                        html.H3("Algae Hydrothermal Liquefaction"),
+                        href="/Algae-Hydrothermal-Liquefaction",
+                        active="exact",
+                        external_link=True,
+                        # disabled=True,
+                    )
+                ),
+                dbc.NavItem(
+                    dbc.NavLink(
                         html.H3("Catalytic Fast Pyrolysis"),
                         href="/Catalytic-Fast-Pyrolysis",
                         active="exact",
@@ -1097,15 +1106,6 @@ index_page = html.Div(  # The content of the index page
                     dbc.NavLink(
                         html.H3("Indirect Hydrothermal Liquefaction"),
                         href="/Indirect-Hydrothermal-Liquefaction",
-                        active="exact",
-                        external_link=True,
-                        disabled=True,
-                    )
-                ),
-                dbc.NavItem(
-                    dbc.NavLink(
-                        html.H3("Algae Hydrothermal Liquefaction"),
-                        href="/Algae-Hydrothermal-Liquefaction",
                         active="exact",
                         external_link=True,
                         disabled=True,

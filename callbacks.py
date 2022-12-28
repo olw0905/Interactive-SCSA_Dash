@@ -65,6 +65,9 @@ def download_files(n_clicks, stored_data):
     Input("scenario-radioitems", "value"),
 )
 def download_files(pathname, value):
+    """
+    Update the pathway tile, senario options, and the file name for user download
+    """
     file_to_use = ""
     file_name = ""
     if "Biochemical" in pathname:
@@ -87,6 +90,9 @@ def download_files(pathname, value):
     elif "Combined" in pathname:
         file_to_use = files["cap"][value]
         file_name = "CAP via BDO.xlsm" if value == 0 else "CAP via acids.xlsm"
+    elif "Algae-Hydrothermal" in pathname:
+        file_to_use = files["ahtl"]
+        file_name = "Algae HTL.xlsm"
     return file_to_use, file_name
 
 
@@ -132,6 +138,8 @@ def update_pathway_title(pathname):
         ]
         value = 1
         is_open = True
+    if "Algae-Hydrothermal" in pathname:
+        pathway_title = "RD Production from Algae Hydrothermal Liquefaction"
     return pathway_title, options, value, is_open
 
 
@@ -375,6 +383,8 @@ def update_results(
             file_to_use = files["sludge"][value]
         elif "Combined" in pathname:
             file_to_use = files["cap"][value]
+        elif "Algae-Hydrothermal" in pathname:
+            file_to_use = files["ahtl"]
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
             # "Feedstock test2.xlsm"
