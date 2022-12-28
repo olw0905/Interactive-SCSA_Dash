@@ -737,7 +737,6 @@ def process(step_mapping, looped=False):
     """
     Process the LCI data by converting inputs from another stage to its corresponding LCI data.
     """
-    to_process = False
     for key, value in step_mapping.items():
         if used_other_process(value):
             out = value[value["Type"] == "Input from Another Stage"]
@@ -747,9 +746,13 @@ def process(step_mapping, looped=False):
                 if used_other_process(step_mapping[other_proc]):
                     to_process = False
                     break
-        if to_process:
-            step_mapping = step_processing(step_mapping, key)
-            step_mapping = process(step_mapping)
+            if to_process:
+                step_mapping = step_processing(step_mapping, key)
+                step_mapping = process(step_mapping)
+            else:
+                return "error"
+        else:
+            pass
     return step_mapping
 
 

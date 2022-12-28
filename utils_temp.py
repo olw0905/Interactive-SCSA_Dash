@@ -739,17 +739,43 @@ def process(step_mapping, looped=False):
     """
     to_process = False
     for key, value in step_mapping.items():
+        # print("Processing: ", key)
         if used_other_process(value):
             out = value[value["Type"] == "Input from Another Stage"]
             other_processes = out["Previous Stage"].values
             to_process = True
             for other_proc in other_processes:
+                # print(other_proc, to_process)
+                # if isinstance(step_mapping, dict):
+                #     print(step_mapping.keys())
+                # else:
+                #     print(step_mapping)
                 if used_other_process(step_mapping[other_proc]):
                     to_process = False
                     break
+            # print("'{}' is processed: {}".format(key, to_process))
         if to_process:
+            print("mergeing process: ", key)
             step_mapping = step_processing(step_mapping, key)
             step_mapping = process(step_mapping)
+            # print("After merge: ---------------------")
+            # print(step_mapping[key])
+            # print("------------------------")
+        # else:
+        # print("final status2222: {}".format(to_process))
+        # return "error"
+        # else:
+        #     pass
+    # if to_process:
+    #     print("mergeing process: ", key)
+    #     step_mapping = step_processing(step_mapping, key)
+    #     step_mapping = process(step_mapping)
+    #     print("After merge: ---------------------")
+    #     print(step_mapping[key])
+    #     print("------------------------")
+    # else:
+    #     print("final status2222: {}".format(to_process))
+    #     return "error"
     return step_mapping
 
 
