@@ -314,7 +314,7 @@ def generate_final_lci(
     # main_product_category = main_products["Category"].values[0]
     main_product_resource = main_products["Resource"].values[0]
     main_product_end_use = main_products["End Use"].values[0]
-    rd_dist_loss = 1.00004514306778
+    rd_dist_loss = 1.00004531145488
 
     if (
         ("renewable diesel" in main_product_resource)
