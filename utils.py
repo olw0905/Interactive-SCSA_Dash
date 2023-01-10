@@ -1005,7 +1005,7 @@ def calculate_lca(df_lci, include_incumbent=True):
                 res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
             )  # Convert the functional unit from calculation unit to target unit
         res.loc[
-            res["Type"] == "Main Product", "Unit"
+            res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
         ] = target_unit  # Update the functional unit of the main product after the conversion
     elif main_product_category in ["Biomass"]:
         for metric in metrics:
@@ -1013,6 +1013,6 @@ def calculate_lca(df_lci, include_incumbent=True):
                 res[metric + "_Sum"] / mass.loc[target_unit, calculation_unit]
             )  # Convert the functional unit from calculation unit to target unit
         res.loc[
-            res["Type"] == "Main Product", "Unit"
+            res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
         ] = target_unit  # Update the functional unit of the main product after the conversion
     return res

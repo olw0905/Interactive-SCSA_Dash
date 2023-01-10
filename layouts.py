@@ -90,7 +90,7 @@ nav_item = dbc.Nav(
                 href="/Algae-Hydrothermal-Liquefaction",
                 active="exact",
                 external_link=True,
-                disabled=True,
+                # disabled=True,
             )
         ),
         dbc.NavItem(
