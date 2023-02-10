@@ -265,9 +265,15 @@ co2_carbon = 12 / 44
 co_carbon = 12 / 28
 voc_carbon = 0.85
 
+# # AR5 GWPs
+# co2_gwp = 1
+# ch4_gwp = 30
+# n2o_gwp = 265
+
+# # AR6 GWPs
 co2_gwp = 1
-ch4_gwp = 30
-n2o_gwp = 265
+ch4_gwp = 29.8
+n2o_gwp = 273
 
 
 def volume_to_mass(vol, input_unit, density):

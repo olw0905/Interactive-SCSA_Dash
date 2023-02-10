@@ -53,7 +53,8 @@ def read_data(lci_file):
             ).squeeze()
             df = pd.read_excel(lci_file, sheet_name=sheet, skiprows=4)
             df["End Use"] = df["End Use"].fillna("")
-            df["Process"] = df["Process"].fillna(method="ffill").fillna(sheet)
+            # df["Process"] = df["Process"].fillna(method="ffill").fillna(sheet)
+            df["Process"] = df["Process"].fillna(sheet)
             df["Urban Share"] = df["Urban Share"].fillna(urban_share)
 
             # Select the input from another stage that has end use emissions
