@@ -29,7 +29,7 @@ files = {
         "static/Algae CAP via Acids_2022.xlsm",
     ],
     "ahtl": "static/Algae HTL_2022 SOT.xlsm",
-    "idl": "",
+    "idl": "static/IDL_2023 SOT.xlsm",
 }
 
 metrics = [

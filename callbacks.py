@@ -93,6 +93,9 @@ def download_files(pathname, value):
     elif "Algae-Hydrothermal" in pathname:
         file_to_use = files["ahtl"]
         file_name = "Algae HTL.xlsm"
+    elif "Indirect" in pathname:
+        file_to_use = files["idl"]
+        file_name = "Indirect Hydrothermal Liquefaction.xlsm"
     return file_to_use, file_name
 
 
@@ -140,6 +143,8 @@ def update_pathway_title(pathname):
         is_open = True
     if "Algae-Hydrothermal" in pathname:
         pathway_title = "RD Production from Algae Hydrothermal Liquefaction"
+    if "Indirect" in pathname:
+        pathway_title = "Renewable Hydrocarbon Production from Indirect Hydrothermal Liquefaction"
     return pathway_title, options, value, is_open
 
 
@@ -385,6 +390,8 @@ def update_results(
             file_to_use = files["cap"][value]
         elif "Algae-Hydrothermal" in pathname:
             file_to_use = files["ahtl"]
+        elif "Indirect" in pathname:
+            file_to_use = files["idl"]
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
             # "Feedstock test2.xlsm"

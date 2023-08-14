@@ -95,17 +95,17 @@ nav_item = dbc.Nav(
         ),
         dbc.NavItem(
             dbc.NavLink(
-                "Catalytic Fast Pyrolysis",
-                href="/Catalytic-Fast-Pyrolysis",
+                "Indirect Hydrothermal Liquefaction",
+                href="/Indirect-Hydrothermal-Liquefaction",
                 active="exact",
                 external_link=True,
-                disabled=True,
+                # disabled=True,
             )
         ),
         dbc.NavItem(
             dbc.NavLink(
-                "Indirect Hydrothermal Liquefaction",
-                href="/Indirect-Hydrothermal-Liquefaction",
+                "Catalytic Fast Pyrolysis",
+                href="/Catalytic-Fast-Pyrolysis",
                 active="exact",
                 external_link=True,
                 disabled=True,
@@ -1095,17 +1095,17 @@ index_page = html.Div(  # The content of the index page
                 ),
                 dbc.NavItem(
                     dbc.NavLink(
-                        html.H3("Catalytic Fast Pyrolysis"),
-                        href="/Catalytic-Fast-Pyrolysis",
+                        html.H3("Indirect Hydrothermal Liquefaction"),
+                        href="/Indirect-Hydrothermal-Liquefaction",
                         active="exact",
                         external_link=True,
-                        disabled=True,
+                        # disabled=True,
                     )
                 ),
                 dbc.NavItem(
                     dbc.NavLink(
-                        html.H3("Indirect Hydrothermal Liquefaction"),
-                        href="/Indirect-Hydrothermal-Liquefaction",
+                        html.H3("Catalytic Fast Pyrolysis"),
+                        href="/Catalytic-Fast-Pyrolysis",
                         active="exact",
                         external_link=True,
                         disabled=True,
