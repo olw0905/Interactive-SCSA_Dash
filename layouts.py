@@ -113,7 +113,7 @@ nav_item = dbc.Nav(
         ),
     ],
     vertical="md",
-    pills=True,
+    # pills=True,
 )
 
 navbar = dbc.Navbar(
