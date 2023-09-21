@@ -29,7 +29,7 @@ files = {
         # "static/Algae CAP via BDO.xlsm",
         # "static/Algae CAP via acids.xlsm",
         "static/Algae CAP via BDO_2022.xlsm",
-        "static/Algae CAP via Acids_2022.xlsm",
+        "static/Algae CAP via acids_2022.xlsm",
     ],
     "ahtl": "static/Algae HTL_2022 SOT.xlsm",
     "idl": "static/IDL_2023 SOT.xlsm",
