@@ -108,7 +108,7 @@ nav_item = dbc.Nav(
                 href="/Catalytic-Fast-Pyrolysis",
                 active="exact",
                 external_link=True,
-                disabled=True,
+                # disabled=True,
             )
         ),
     ],
@@ -1108,7 +1108,7 @@ index_page = html.Div(  # The content of the index page
                         href="/Catalytic-Fast-Pyrolysis",
                         active="exact",
                         external_link=True,
-                        disabled=True,
+                        # disabled=True,
                     )
                 ),
             ],

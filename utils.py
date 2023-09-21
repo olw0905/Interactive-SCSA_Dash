@@ -21,7 +21,10 @@ files = {
         "static/Sludge HTL with NH3 removal_2022 SOT.xlsm",
         "static/Sludge HTL without NH3 removal_2022 SOT.xlsm",
     ],
-    "cfp": "",
+    "cfp": [
+        "static/CFP_standalone.xlsm",
+        "static/CFP_coprocess.xlsm",
+    ],
     "cap": [
         # "static/Algae CAP via BDO.xlsm",
         # "static/Algae CAP via acids.xlsm",

@@ -96,6 +96,9 @@ def download_files(pathname, value):
     elif "Indirect" in pathname:
         file_to_use = files["idl"]
         file_name = "Indirect Hydrothermal Liquefaction.xlsm"
+    elif "Catalytic-Fast-Pyrolysis" in pathname:
+        file_to_use = files["cfp"][value]
+        file_name = "CFP_standalone.xlsm" if value == 0 else "CFP_coprocess.xlsm"
     return file_to_use, file_name
 
 
@@ -133,6 +136,14 @@ def update_pathway_title(pathname):
         ]
         value = 1
         is_open = True
+    if "Catalytic-Fast-Pyrolysis" in pathname:
+        pathway_title = "RD Production from Catalytic Fast Pyrolysis of Woody Biomass"
+        options = [
+            {"label": "Standalone Biorefinery", "value": 0},
+            {"label": "Coprocess with a Petroleum Refinery", "value": 1},
+        ]
+        value = 1
+        is_open = True
     if "Combined" in pathname:
         pathway_title = "RD Production from Combined Algae Processing"
         options = [
@@ -144,7 +155,9 @@ def update_pathway_title(pathname):
     if "Algae-Hydrothermal" in pathname:
         pathway_title = "RD Production from Algae Hydrothermal Liquefaction"
     if "Indirect" in pathname:
-        pathway_title = "Renewable Hydrocarbon Production from Indirect Hydrothermal Liquefaction"
+        pathway_title = (
+            "Renewable Hydrocarbon Production from Indirect Hydrothermal Liquefaction"
+        )
     return pathway_title, options, value, is_open
 
 
@@ -392,6 +405,8 @@ def update_results(
             file_to_use = files["ahtl"]
         elif "Indirect" in pathname:
             file_to_use = files["idl"]
+        elif "Catalytic-Fast-Pyrolysis" in pathname:
+            file_to_use = files["cfp"][value]
         lci_mapping, coproduct_mapping, final_process_mapping = read_data(
             # "2021 Biochem SOT via BDO_working.xlsm"
             # "Feedstock test2.xlsm"
