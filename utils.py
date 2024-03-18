@@ -5,7 +5,8 @@
 import pandas as pd
 
 # data_file = "Lookup table_prototyping.xlsx"
-data_file = "Lookup table_prototyping_greet2022.xlsx"
+# data_file = "Lookup table_prototyping_greet2022.xlsx"
+data_file = "Lookup table_prototyping_greet2023.xlsx"
 files = {
     "biochem": [
         # "static/Biochemical conversion via BDO.xlsm",
@@ -425,7 +426,7 @@ fuel_dist_urban = pd.read_excel(
     sheet_name="Fuel dist urban",
     index_col=0,
     header=[0, 1],
-    # skipfooter=2,
+    skipfooter=2,
 )
 fuel_dist_urban = fuel_dist_urban.apply(process_ser, axis=0)
 fuel_dist_urban = fuel_dist_urban.drop("Functional Unit")
