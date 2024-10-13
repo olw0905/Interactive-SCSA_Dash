@@ -191,12 +191,12 @@ biorefinery_conversion = {  # The conversion used to calculate biorefinery-level
     "Urban OC": 1000,
 }
 
-combination_basis = {  # The basis for combinaning multiple "main products"
-    "Biomass": "kg",
-    "Process fuel": "mmBTU",
-    "Electricity": "mmBTU",
-    "Chemicals and catalysts": "kg",
-}
+# combination_basis = {  # The basis for combinaning multiple "main products"
+#     "Biomass": "kg",
+#     "Process fuel": "mmBTU",
+#     "Electricity": "mmBTU",
+#     "Chemicals and catalysts": "kg",
+# }
 
 primary_units = {
     # Function "process_ser" requires to use g for mass and mmBTU for energy.
@@ -368,7 +368,7 @@ production_emissions = pd.read_excel(
     index_col=0,
     skipfooter=2,
 )
-production_emissions = production_emissions.dropna()
+production_emissions = production_emissions.dropna(how="all").fillna(0)
 production_emissions.loc["Biogenic CO2"] = 0
 production_emissions.index = production_emissions.index.str.strip()
 production_emissions = production_emissions.apply(process_ser, axis=0)
@@ -380,7 +380,7 @@ chemicals_emissions = pd.read_excel(
     index_col=0,
     skipfooter=2,
 )
-chemicals_emissions = chemicals_emissions.dropna()
+chemicals_emissions = chemicals_emissions.dropna(how="all").fillna(0)
 chemicals_emissions.loc["Biogenic CO2"] = 0
 chemicals_emissions.index = chemicals_emissions.index.str.strip()
 chemicals_emissions = chemicals_emissions.apply(process_ser, axis=0)
@@ -389,7 +389,7 @@ chemicals_emissions = chemicals_emissions.drop(["Functional Unit"])
 feedstock_emissions = pd.read_excel(
     data_file, sheet_name="Feedstock", index_col=0, skipfooter=2
 )
-feedstock_emissions = feedstock_emissions.dropna()
+feedstock_emissions = feedstock_emissions.dropna(how="all").fillna(0)
 feedstock_emissions.loc["Biogenic CO2"] = 0
 feedstock_emissions.index = feedstock_emissions.index.str.strip()
 feedstock_emissions = feedstock_emissions.apply(process_ser, axis=0)
@@ -867,7 +867,8 @@ def format_input(dff, basis=None):
         if (
             basis is None
         ):  # Displacement method, combine multiple entries by the primary unit
-            main_products["Primary Unit"] = combination_basis[main_product_category]
+            # main_products["Primary Unit"] = combination_basis[main_product_category]
+            main_products["Primary Unit"] = primary_units[main_product_category]
             main_products = main_products.rename(columns={"Amount": "Input Amount"})
             main_products["Amount"] = main_products.apply(unit_conversion, axis=1)
             main_products["Amount"] = main_products["Amount"].sum()
@@ -921,6 +922,12 @@ def calculate_lca(df_lci, include_incumbent=True):
     # res = pd.merge(df_lci, lookup_table, left_on="ID", right_index=True, how="left")
     # res["Primary Unit"] = res["Primary Unit"].str.lower()
 
+    main_product_category = df_lci.loc[df_lci["Type"] == "Main Product", "Category"].values[0]
+    # The user-input unit for the main product 
+    calculation_unit = df_lci.loc[df_lci["Type"] == "Main Product", "Unit"].values[0]
+    # The display unit for the main product
+    target_unit = display_units[main_product_category]
+
     if include_incumbent:
         # Separate out the incumbent product that the main product is compared with
         incumbent_resource = (
@@ -957,7 +964,7 @@ def calculate_lca(df_lci, include_incumbent=True):
                 "End Use": [incumbent_end_use],
                 "Urban Share": [incumbent_urban_share],
                 "Amount": [1],
-                "Unit": [primary_units[incumbent_category]],
+                "Unit": [calculation_unit],
             }
         )
         df_lci = pd.concat([df_lci, df_incumbent])
@@ -985,16 +992,66 @@ def calculate_lca(df_lci, include_incumbent=True):
     # Do unit conversion before calculation
     res = res.rename(columns={"Amount": "Input Amount"})
     res["Amount"] = res.apply(unit_conversion, axis=1)
-    res["Unit"] = res["Primary Unit"]
-    res["Amount"] = (
-        res["Amount"] / res.loc[res["Type"] == "Main Product", "Amount"].sum()
-    )
-    if include_incumbent:
-        res.loc[res["Pathway"].str.contains("Incumbent"), "Amount"] = 1
+    # res["Unit"] = res["Primary Unit"]
+    # res["Amount"] = (
+    #     res["Amount"] / res.loc[res["Type"] == "Main Product", "Amount"].sum()
+    # )
+    # if include_incumbent:
+    #     res.loc[res["Pathway"].str.contains("Incumbent"), "Amount"] = 1
     # res = res[res["Type"] != "Main Product"]
-    main_product_category = res.loc[res["Type"] == "Main Product", "Category"].values[0]
-    calculation_unit = primary_units[main_product_category]
-    target_unit = display_units[main_product_category]
+
+    # main_product_category = res.loc[res["Type"] == "Main Product", "Category"].values[0]
+    # calculation_unit = res.loc[res["Type"] == "Main Product", "Unit"].values[0]
+    # target_unit = display_units[main_product_category]
+
+    # if main_product_category in ["Process fuel", "Electricity"]:
+    if calculation_unit in energy.columns:
+        # for metric in metrics:
+        res["Amount"] = (
+            res["Amount"] / energy.loc[target_unit, calculation_unit]
+        )  # Convert the functional unit from calculation unit to target unit
+
+        # res.loc[
+        #     res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
+        # ] = target_unit  # Update the functional unit of the main product after the conversion
+        
+    # elif main_product_category in ["Biomass", "Chemicals and catalysts"]:
+    elif calculation_unit in mass.columns:
+        # for metric in metrics:
+        res["Amount"] = (
+            res["Amount"] / mass.loc[target_unit, calculation_unit]
+        )  # Convert the functional unit from calculation unit to target unit
+
+        # res.loc[
+        #     res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
+        # ] = target_unit  # Update the functional unit of the main product after the conversion
+    # # Update the amount and functional unit of the main product after the conversion
+
+    # # res["Amount"] = (
+    # #     res["Amount"] / res.loc[res["Type"] == "Main Product", "Amount"].sum()
+    # # )
+
+    # res.loc[
+    #     res["Type"].isin(["Main Product"]), "Amount"
+    #     ] = 1
+    # res.loc[
+    #     res["Type"].isin(["Main Product"]), "Primary Unit"
+    #     ] = target_unit
+    # if include_incumbent:
+    #     res.loc[res["Pathway"].str.contains("Incumbent"), "Amount"] = 1
+    #     res.loc[res["Pathway"].str.contains("Incumbent"), "Primary Unit"] = target_unit  
+    # if main_product_category in ["Process fuel", "Electricity"]:
+    # for metric in metrics:
+    #     res[metric + "_Sum"] = (
+    #         res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
+        # )  # Convert the functional unit from calculation unit to target unit
+        # res.loc[
+        #     res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
+        # ] = target_unit  # Update the functional unit of the main product after the conversion
+    
+        # res.loc[
+        #     res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
+        # ] = target_unit  # Update the functional unit of the main product after the conversion
 
     for metric in metrics:
         res[metric + "_Sum"] = res["Amount"] * res[metric]
@@ -1008,21 +1065,16 @@ def calculate_lca(df_lci, include_incumbent=True):
         "Petroleum, Btu",
     ]:
         res[metric + "_Sum"] = res[metric + "_Sum"] * energy.loc["MJ", "BTU"]
-
-    if main_product_category in ["Process fuel", "Electricity"]:
-        for metric in metrics:
-            res[metric + "_Sum"] = (
-                res[metric + "_Sum"] / energy.loc[target_unit, calculation_unit]
-            )  # Convert the functional unit from calculation unit to target unit
-        res.loc[
-            res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
-        ] = target_unit  # Update the functional unit of the main product after the conversion
-    elif main_product_category in ["Biomass"]:
-        for metric in metrics:
-            res[metric + "_Sum"] = (
-                res[metric + "_Sum"] / mass.loc[target_unit, calculation_unit]
-            )  # Convert the functional unit from calculation unit to target unit
-        res.loc[
-            res["Type"].isin(["Main Product", "Intermediate Product"]), "Unit"
-        ] = target_unit  # Update the functional unit of the main product after the conversion
+    # Update the amount and functional unit of the main product after the conversion
+    # This step must be done as the last step, otherwise incorrect amount is applied to 
+    # Formula (EF * amount) is not for the main product.
+    res.loc[
+        res["Type"].isin(["Main Product"]), "Amount"
+        ] = 1
+    res.loc[
+        res["Type"].isin(["Main Product"]), "Primary Unit"
+        ] = target_unit
+    if include_incumbent:
+        res.loc[res["Pathway"].str.contains("Incumbent"), "Amount"] = 1
+        res.loc[res["Pathway"].str.contains("Incumbent"), "Primary Unit"] = target_unit  
     return res

@@ -576,6 +576,7 @@ def postprocess(res):
         .str.replace("Wwt", "WWT")
         .str.replace("Fgd", "FGD")
         .str.replace("Bdo", "BDO")
+        .str.replace("Saf", "SAF")
     )
     if "Pathway" in res.columns:
         res["Pathway"] = (
@@ -584,6 +585,7 @@ def postprocess(res):
             .str.replace("Wwt", "WWT")
             .str.replace("Fgd", "FGD")
             .str.replace("Bdo", "BDO")
+            .str.replace("Saf", "SAF")
         )
 
     res = res.rename(columns={"Process": "Life-Cycle Stage"})
